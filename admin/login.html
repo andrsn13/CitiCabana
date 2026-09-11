@@ -48,37 +48,11 @@
             <button type="submit" class="btn btn-primary btn-block">Sign In</button>
           </form>
           
-          <div class="auth-footer">
-            <p>Day Zero Setup? <a href="#" onclick="switchAuthView('view-signup')">Create Master Account</a></p>
+          <div class="auth-footer" style="padding-bottom: 24px;">
           </div>
         </div>
 
-        <!-- Form 2: CREATE ACCOUNT (Day Zero) -->
-        <div id="view-signup" class="auth-view hidden">
-          <h2>Initial Setup</h2>
-          <p class="auth-subtitle">Create the master administrator account.</p>
-          <div id="signup-error" class="error-msg">Failed to create account.</div>
-          <div id="signup-success" class="success-msg hidden">Account created successfully. You can now sign in.</div>
-          
-          <form id="signup-form">
-            <div class="form-group">
-              <label for="signup-email">Master Email</label>
-              <input type="email" id="signup-email" required>
-            </div>
-            <div class="form-group">
-              <label for="signup-password">Create Password</label>
-              <div class="password-wrapper">
-                <input type="password" id="signup-password" required>
-                <button type="button" class="pwd-toggle" onclick="togglePwd('signup-password')">Show</button>
-              </div>
-            </div>
-            <button type="submit" class="btn btn-primary btn-block">Create Admin Account</button>
-          </form>
-          
-          <div class="auth-footer">
-            <p><a href="#" onclick="switchAuthView('view-signin')">&larr; Back to Sign In</a></p>
-          </div>
-        </div>
+
 
         <!-- Form 3: RESET PASSWORD -->
         <div id="view-reset" class="auth-view hidden">

@@ -40,41 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 2. CREATE ACCOUNT (Day Zero Setup)
-  const signupForm = document.getElementById('signup-form');
-  if (signupForm) {
-    signupForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const email = document.getElementById('signup-email').value;
-      const pass = document.getElementById('signup-password').value;
-      const errorMsg = document.getElementById('signup-error');
-      const successMsg = document.getElementById('signup-success');
-      
-      const btn = e.target.querySelector('button');
-      btn.disabled = true;
-      btn.textContent = 'Creating...';
-
-      auth.createUserWithEmailAndPassword(email, pass)
-        .then((userCredential) => {
-          successMsg.style.display = 'block';
-          successMsg.classList.remove('hidden');
-          errorMsg.style.display = 'none';
-          signupForm.reset();
-        })
-        .catch((error) => {
-          console.error(error.code, error.message);
-          errorMsg.textContent = translateFirebaseError(error.code); 
-          errorMsg.style.display = 'block';
-          errorMsg.classList.remove('hidden');
-          successMsg.style.display = 'none';
-        })
-        .finally(() => {
-          btn.disabled = false;
-          btn.textContent = 'Create Admin Account';
-        });
-    });
-  }
-
   // 3. RESET PASSWORD
   const resetForm = document.getElementById('reset-form');
   if (resetForm) {
