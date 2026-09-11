@@ -1,13 +1,13 @@
 // Firebase v10 compat initialization
 
 const firebaseConfig = {
-  apiKey: FIREBASE_API_KEY,
-  authDomain: AUTH_DOMAIN,
-  projectId: PROJECT_ID,
-  storageBucket: STORAGE_BUCKET,
-  messagingSenderId: MESSAGING_SENDER_ID,
-  appId: APP_ID,
-  measurementId: MEASUREMENT_ID,
+  apiKey: "AIzaSyBeeqcnkTPdS_Ncq4NmWDLWfoJdHmq8vt4",
+  authDomain: "citi-cabana.firebaseapp.com",
+  projectId: "citi-cabana",
+  storageBucket: "citi-cabana.firebasestorage.app",
+  messagingSenderId: "799572717209",
+  appId: "1:799572717209:web:76a6b343c5b416d375d208",
+  measurementId: "G-JRKPVWFKEJ",
 };
 
 // Initialize Firebase
