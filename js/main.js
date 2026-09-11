@@ -1,20 +1,16 @@
 // Hub & Spoke Interactivity & Logic
 
-// Array for Lightbox Gallery Data
-const galleryImages = [
-  "https://images.unsplash.com/photo-1571896349842-33c89424de2d?q=80&w=1200", // Resort View
-  "https://images.unsplash.com/photo-1576013551627-1140e6c64147?q=80&w=1200", // Pool Area
-  "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?q=80&w=1200", // Villa Interior
-  "https://images.unsplash.com/photo-1530103862676-de8892bf309c?q=80&w=1200", // Event Setup
-  "https://images.unsplash.com/photo-1499696010180-025ef6e1a8f9?q=80&w=1200", // Night Lights
-  "https://images.unsplash.com/photo-1540541338287-41700207dee6?q=80&w=1200", // Additional 1
-  "https://images.unsplash.com/photo-1618773928121-c32242fa11f5?q=80&w=1200", // Additional 2
-  "https://images.unsplash.com/photo-1519225421980-715cb0215aed?q=80&w=1200"  // Additional 3
-];
 let currentLightboxIndex = 0;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // Phase 2: Load CMS Data before rendering UI
+  if (typeof loadCMSData === 'function') {
+    await loadCMSData();
+  }
+  
   renderSplitScreenRooms();
+  renderEventsSection();
+  renderBentoGrid();
   setupMobileMenu();
   setupOrderSummaryListeners();
   setupScrollspy();
@@ -57,6 +53,8 @@ function renderSplitScreenRooms() {
   
   if (!container || !select) return;
 
+  container.innerHTML = ''; // Clear container
+
   roomsData.forEach(room => {
     // Populate dropdown
     const option = document.createElement('option');
@@ -65,7 +63,7 @@ function renderSplitScreenRooms() {
     select.appendChild(option);
 
     // Build editorial row
-    const isVilla = room.id === 'villa';
+    const isVilla = room.id === 'villa' || room.name.toLowerCase().includes('villa');
     const row = document.createElement('div');
     row.className = `room-row ${isVilla ? 'full-width' : ''}`;
     
@@ -87,6 +85,35 @@ function renderSplitScreenRooms() {
       </div>
     `;
     container.appendChild(row);
+  });
+}
+
+// Render Events Section
+function renderEventsSection() {
+  const container = document.getElementById('events-card-container');
+  if (!container || !eventData) return;
+
+  container.innerHTML = `
+    <h2 class="display-heading">${eventData.title}</h2>
+    <p>${eventData.description}</p>
+    <button class="btn btn-primary mt-4" onclick="openBookingModal('event')">Inquire About Events</button>
+  `;
+}
+
+// Render Bento Grid (Top 5 images)
+function renderBentoGrid() {
+  const container = document.getElementById('bento-grid-container');
+  if (!container || !galleryImages) return;
+  
+  container.innerHTML = ''; // clear
+
+  const topImages = galleryImages.slice(0, 5);
+  topImages.forEach((url, index) => {
+    const item = document.createElement('div');
+    item.className = `bento-item bento-${index + 1}`;
+    item.onclick = () => openLightbox(index);
+    item.innerHTML = `<img src="${url}" alt="Gallery Image ${index + 1}">`;
+    container.appendChild(item);
   });
 }
 

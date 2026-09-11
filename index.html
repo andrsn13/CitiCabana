@@ -71,10 +71,8 @@
   <!-- Events Section (Parallax Window) -->
   <section id="events" class="parallax-section" style="background-image: url('https://images.unsplash.com/photo-1519225421980-715cb0215aed?q=80&w=1920');">
     <div class="parallax-content">
-      <div class="glass-card">
-        <h2 class="display-heading">Celebrate Here</h2>
-        <p>Host your weddings, baptisms, birthdays, and special occasions in our beautiful event spaces. We offer customized setups tailored to unforgettable moments.</p>
-        <button class="btn btn-primary mt-4" onclick="openBookingModal('event')">Inquire About Events</button>
+      <div class="glass-card" id="events-card-container">
+        <!-- Rendered via JS -->
       </div>
     </div>
   </section>
@@ -85,12 +83,8 @@
       <div class="section-header text-center">
         <h2 class="display-heading">The Experience</h2>
       </div>
-      <div class="bento-grid">
-        <div class="bento-item bento-1" onclick="openLightbox(0)"><img src="https://images.unsplash.com/photo-1571896349842-33c89424de2d?q=80&w=800" alt="Resort View"></div>
-        <div class="bento-item bento-2" onclick="openLightbox(1)"><img src="https://images.unsplash.com/photo-1576013551627-1140e6c64147?q=80&w=800" alt="Pool Area"></div>
-        <div class="bento-item bento-3" onclick="openLightbox(2)"><img src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?q=80&w=800" alt="Villa Interior"></div>
-        <div class="bento-item bento-4" onclick="openLightbox(3)"><img src="https://images.unsplash.com/photo-1530103862676-de8892bf309c?q=80&w=800" alt="Event Setup"></div>
-        <div class="bento-item bento-5" onclick="openLightbox(4)"><img src="https://images.unsplash.com/photo-1499696010180-025ef6e1a8f9?q=80&w=1200" alt="Night Lights"></div>
+      <div class="bento-grid" id="bento-grid-container">
+        <!-- Rendered via JS -->
       </div>
       <div class="text-center mt-4 pt-4">
         <button class="btn btn-outline" onclick="openGalleryModal()">View Full Gallery</button>

@@ -24,5 +24,21 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // [PHASE 2 CMS] Content Collections
+    match /rooms/{roomId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /gallery/{imageId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }
