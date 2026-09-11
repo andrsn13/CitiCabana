@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CMS Management - Citi Cabana Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/admin.css">
+  <style>
+    /* CMS Specific Styles */
+    .cms-tabs {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--admin-border);
+      padding-bottom: 0.5rem;
+    }
+    .cms-tab {
+      background: none;
+      border: none;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--admin-text);
+      cursor: pointer;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+    }
+    .cms-tab.active {
+      background-color: var(--admin-primary);
+      color: white;
+    }
+    .cms-section {
+      display: none;
+    }
+    .cms-section.active {
+      display: block;
+    }
+    .cms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+    .cms-card {
+      background: white;
+      border: 1px solid var(--admin-border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .cms-card img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+    .form-group input, .form-group textarea {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid var(--admin-border);
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      box-sizing: border-box;
+    }
+    .btn-delete {
+      background-color: var(--admin-danger);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-save {
+      background-color: var(--admin-primary);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .image-upload-wrapper {
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-layout">
+    
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+      <div class="admin-brand">Citi Cabana</div>
+      <ul class="admin-nav">
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="bookings.html">Bookings</a></li>
+        <li><a href="room-status.html">Room Status</a></li>
+        <li><a href="reports.html">Reports</a></li>
+        <li style="margin-top: 15px; font-size: 0.8em; text-transform: uppercase; color: #888; padding-left: 15px;">Content</li>
+        <li><a href="cms.html" class="active">Manage Website</a></li>
+        <li style="margin-top: 30px;"><a href="#" onclick="logout()">Logout</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="admin-content">
+      <div class="page-header">
+        <h1>Content Management System</h1>
+        <span id="admin-user-display"></span>
+      </div>
+
+      <div class="cms-tabs">
+        <button class="cms-tab active" onclick="switchCmsTab('rooms')">Rooms</button>
+        <button class="cms-tab" onclick="switchCmsTab('gallery')">Gallery</button>
+        <button class="cms-tab" onclick="switchCmsTab('events')">Events Section</button>
+      </div>
+
+      <!-- ROOMS CMS -->
+      <div id="cms-rooms" class="cms-section active">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <h2>Manage Rooms</h2>
+          <button class="btn-save" onclick="openRoomModal()">+ Add New Room</button>
+        </div>
+        <div class="cms-grid" id="cms-rooms-grid">
+          <!-- Rendered via JS -->
+          <p>Loading rooms...</p>
+        </div>
+      </div>
+
+      <!-- GALLERY CMS -->
+      <div id="cms-gallery" class="cms-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <h2>Manage Gallery</h2>
+          <button class="btn-save" onclick="openGalleryModal()">+ Add Photo</button>
+        </div>
+        <div class="cms-grid" id="cms-gallery-grid">
+          <!-- Rendered via JS -->
+          <p>Loading gallery...</p>
+        </div>
+      </div>
+
+      <!-- EVENTS CMS -->
+      <div id="cms-events" class="cms-section">
+        <h2>Manage Events Section</h2>
+        <div class="cms-card" style="max-width: 600px;">
+          <form id="cms-events-form">
+            <div class="form-group">
+              <label>Section Title</label>
+              <input type="text" id="event-title-input" required>
+            </div>
+            <div class="form-group">
+              <label>Section Description</label>
+              <textarea id="event-desc-input" rows="4" required></textarea>
+            </div>
+            <button type="submit" class="btn-save">Save Events Content</button>
+            <span id="event-save-status" style="margin-left: 1rem; color: var(--admin-success); display: none;">Saved!</span>
+          </form>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Room Edit/Add Modal -->
+  <div id="cms-room-modal" class="modal-overlay hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 2rem; border-radius: 8px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto;">
+      <h2 id="room-modal-title">Edit Room</h2>
+      <form id="cms-room-form">
+        <input type="hidden" id="room-id-input">
+        <div class="form-group">
+          <label>Room Name</label>
+          <input type="text" id="room-name-input" required>
+        </div>
+        <div class="form-group">
+          <label>Capacity</label>
+          <input type="text" id="room-capacity-input" required>
+        </div>
+        <div class="form-group">
+          <label>Rate (PHP)</label>
+          <input type="number" id="room-rate-input" required>
+        </div>
+        <div class="form-group">
+          <label>Inclusions</label>
+          <textarea id="room-inclusions-input" rows="2" required></textarea>
+        </div>
+        <div class="form-group">
+          <label>Inventory (Number of units)</label>
+          <input type="number" id="room-inventory-input" required>
+        </div>
+        <div class="form-group image-upload-wrapper">
+          <label>Room Image</label>
+          <input type="file" id="room-image-upload" accept="image/*">
+          <input type="hidden" id="room-image-url">
+          <small style="display:block; margin-top:0.5rem; color:#666;">Leave file empty to keep existing image.</small>
+          <div id="room-upload-progress" style="display:none; color: var(--admin-primary); margin-top: 5px;">Uploading...</div>
+        </div>
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+          <button type="submit" class="btn-save" style="flex: 1;" id="save-room-btn">Save Room</button>
+          <button type="button" class="btn-delete" style="flex: 1; background-color: #6c757d;" onclick="closeRoomModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Gallery Add Modal -->
+  <div id="cms-gallery-modal" class="modal-overlay hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 2rem; border-radius: 8px; width: 100%; max-width: 500px;">
+      <h2>Add Gallery Photo</h2>
+      <form id="cms-gallery-form">
+        <div class="form-group">
+          <label>Sort Order (Number)</label>
+          <input type="number" id="gallery-sort-input" value="10" required>
+        </div>
+        <div class="form-group image-upload-wrapper">
+          <label>Select Image</label>
+          <input type="file" id="gallery-image-upload" accept="image/*" required>
+          <div id="gallery-upload-progress" style="display:none; color: var(--admin-primary); margin-top: 5px;">Uploading...</div>
+        </div>
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+          <button type="submit" class="btn-save" style="flex: 1;" id="save-gallery-btn">Upload Photo</button>
+          <button type="button" class="btn-delete" style="flex: 1; background-color: #6c757d;" onclick="closeGalleryModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-storage-compat.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/admin-auth.js"></script>
+  <script src="../js/admin-cms.js"></script>
+  
+  <script>
+    function switchCmsTab(tabId) {
+      document.querySelectorAll('.cms-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.cms-section').forEach(s => s.classList.remove('active'));
+      
+      event.target.classList.add('active');
+      document.getElementById('cms-' + tabId).classList.add('active');
+    }
+  </script>
+</body>
+</html>

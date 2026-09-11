@@ -1,0 +1,15 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // [PHASE 1 SECURITY] RBAC Helper Function for Storage
+    function isAdmin() {
+      return request.auth != null && firestore.exists(/databases/(default)/documents/admin_users/$(request.auth.uid));
+    }
+
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

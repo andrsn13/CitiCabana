@@ -82,6 +82,7 @@ export default defineConfig(() => {
           adminBookingDetail: path.resolve(__dirname, 'admin/booking-detail.html'),
           adminReports: path.resolve(__dirname, 'admin/reports.html'),
           adminRoomStatus: path.resolve(__dirname, 'admin/room-status.html'),
+          adminCms: path.resolve(__dirname, 'admin/cms.html'),
         },
       },
     },
