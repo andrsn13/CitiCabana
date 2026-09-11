@@ -15,6 +15,19 @@ function translateFirebaseError(errorCode) {
 
 document.addEventListener('DOMContentLoaded', () => {
   
+  // Parse URL for unauthorized access redirect
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('error') === 'unauthorized') {
+    const errorMsg = document.getElementById('login-error');
+    if (errorMsg) {
+      errorMsg.textContent = 'Access denied. You do not have admin privileges.';
+      errorMsg.style.display = 'block';
+      errorMsg.classList.remove('hidden');
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }
+
   // 1. SIGN IN
   const loginForm = document.getElementById('login-form');
   if (loginForm) {
@@ -75,19 +88,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
 });
 
-auth.onAuthStateChanged(user => {
+auth.onAuthStateChanged(async user => {
   const path = window.location.pathname;
   const isLoginPage = path.endsWith('login.html') || path.endsWith('/admin/');
   
   if (user) {
-    if (isLoginPage) {
-      window.location.replace('dashboard.html');
-    }
-    
-    // Set user display in sidebar if it exists
-    const userDisplay = document.getElementById('admin-user-display');
-    if (userDisplay) {
-      userDisplay.textContent = user.email;
+    try {
+      // Phase 1 Security: RBAC Check
+      // Verify user exists in admin_users collection
+      const adminDoc = await db.collection('admin_users').doc(user.uid).get();
+      
+      if (adminDoc.exists) {
+        // User is an authorized admin
+        if (isLoginPage) {
+          window.location.replace('dashboard.html');
+        }
+        
+        // Set user display in sidebar if it exists
+        const userDisplay = document.getElementById('admin-user-display');
+        if (userDisplay) {
+          userDisplay.textContent = user.email;
+        }
+      } else {
+        // User authenticated but is NOT an admin
+        console.warn("Unauthorized access attempt by UID:", user.uid);
+        await auth.signOut();
+        
+        if (isLoginPage) {
+          const errorMsg = document.getElementById('login-error');
+          if (errorMsg) {
+            errorMsg.textContent = 'Access denied. You do not have admin privileges.';
+            errorMsg.style.display = 'block';
+            errorMsg.classList.remove('hidden');
+          }
+        } else {
+          window.location.replace('login.html?error=unauthorized');
+        }
+      }
+    } catch (error) {
+      console.error("Error verifying admin status:", error);
+      await auth.signOut();
+      if (!isLoginPage) window.location.replace('login.html');
     }
   } else {
     // Redirect to login if unauthenticated on an admin page
