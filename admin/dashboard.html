@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Citi Cabana Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+  <div class="admin-layout">
+    
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+      <div class="admin-brand">Citi Cabana</div>
+      <ul class="admin-nav">
+        <li><a href="dashboard.html" class="active">Dashboard</a></li>
+        <li><a href="bookings.html">Bookings</a></li>
+        <li><a href="room-status.html">Room Status</a></li>
+        <li><a href="reports.html">Reports</a></li>
+        <li style="margin-top: 30px;"><a href="#" onclick="logout()">Logout</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="admin-content">
+      <div class="page-header">
+        <h1>Dashboard</h1>
+        <span id="admin-user-display"></span>
+      </div>
+
+      <div class="detail-grid">
+        <div class="card">
+          <h2>Pending Bookings</h2>
+          <p style="font-size: 3rem; font-weight: bold; margin: 10px 0; color: var(--admin-warning);" id="dash-pending">0</p>
+          <a href="bookings.html?filter=Pending" class="btn btn-outline">View Pending</a>
+        </div>
+        
+        <div class="card">
+          <h2>Today's Activity</h2>
+          <p><strong>Check-ins:</strong> <span id="dash-checkins">0</span></p>
+          <p><strong>Check-outs:</strong> <span id="dash-checkouts">0</span></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Quick Links</h2>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <a href="bookings.html" class="btn btn-primary">All Bookings</a>
+          <a href="room-status.html" class="btn btn-outline">Update Room Status</a>
+          <a href="reports.html" class="btn btn-outline">Generate Report</a>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/admin-auth.js"></script>
+  <script src="../js/admin.js"></script>
+</body>
+</html>

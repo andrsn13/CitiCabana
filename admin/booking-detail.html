@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Booking Details - Citi Cabana Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="admin-brand">Citi Cabana</div>
+      <ul class="admin-nav">
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="bookings.html" class="active">Bookings</a></li>
+        <li><a href="room-status.html">Room Status</a></li>
+        <li><a href="reports.html">Reports</a></li>
+        <li style="margin-top: 30px;"><a href="#" onclick="logout()">Logout</a></li>
+      </ul>
+    </aside>
+
+    <main class="admin-content">
+      <div class="page-header">
+        <div>
+          <a href="bookings.html" style="color:var(--admin-primary); margin-bottom: 10px; display:inline-block;">&larr; Back to Bookings</a>
+          <h1>Booking Details</h1>
+        </div>
+      </div>
+
+      <!-- Overlap Warning -->
+      <div id="overlap-warning" class="warning-banner">
+        <strong>Warning:</strong> There is already a Confirmed room booking that overlaps with these dates for this room type. 
+        Please review carefully before confirming.
+      </div>
+
+      <div class="detail-grid">
+        <div class="card">
+          <h2>Guest Info</h2>
+          <div id="detail-guest">Loading...</div>
+        </div>
+        
+        <div class="card">
+          <h2>Booking Info</h2>
+          <div id="detail-info">Loading...</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Actions</h2>
+        <div id="action-buttons" style="display:flex; gap: 10px; flex-wrap: wrap;">
+          <!-- Rendered via JS based on status -->
+        </div>
+      </div>
+      
+      <!-- Confirmation Modal / Inline Form for downpayment -->
+      <div id="confirm-panel" class="card" style="display: none; background: #eef2f5;">
+        <h3>Confirm Booking</h3>
+        <div class="form-group">
+          <label>Downpayment Amount Collected (₱)</label>
+          <input type="number" id="dp-amount" min="0">
+        </div>
+        <div class="form-group">
+          <label>Payment Method</label>
+          <select id="dp-method">
+            <option value="Cash">Cash</option>
+            <option value="GCash">GCash</option>
+            <option value="Bank transfer">Bank transfer</option>
+          </select>
+        </div>
+        <button class="btn btn-success" onclick="executeConfirm()">Finalize Confirmation</button>
+        <button class="btn btn-outline" onclick="document.getElementById('confirm-panel').style.display = 'none'">Cancel</button>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/admin-auth.js"></script>
+  <script src="../js/admin.js"></script>
+</body>
+</html>

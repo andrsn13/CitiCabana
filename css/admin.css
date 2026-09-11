@@ -1,0 +1,403 @@
+/* Admin specific styles */
+
+:root {
+  --admin-bg: #f4f6f8;
+  --admin-sidebar: #1F3D2E;
+  --admin-text: #333333;
+  --admin-border: #dfe3e8;
+  --admin-primary: #4C7C8C;
+  --admin-success: #28a745;
+  --admin-danger: #dc3545;
+  --admin-warning: #ffc107;
+  --font-admin: 'Public Sans', sans-serif;
+}
+
+body {
+  margin: 0;
+  background-color: var(--admin-bg);
+  color: var(--admin-text);
+  font-family: var(--font-admin);
+}
+
+/* Auth Layout */
+.login-body {
+  margin: 0;
+  height: 100vh;
+  overflow: hidden;
+  font-family: 'Montserrat', sans-serif;
+}
+
+.login-split {
+  display: flex;
+  height: 100vh;
+}
+
+.login-image {
+  flex: 6;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.login-image-overlay {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(rgba(42, 43, 37, 0.4), rgba(42, 43, 37, 0.8));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+}
+
+.login-brand-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 4rem;
+  margin: 0;
+  letter-spacing: 2px;
+}
+
+.login-brand-subtitle {
+  font-size: 1.2rem;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin-top: 10px;
+  opacity: 0.9;
+}
+
+.login-content {
+  flex: 4;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 60px;
+  position: relative;
+  min-width: 400px;
+}
+
+.return-link {
+  position: absolute;
+  top: 30px;
+  left: 40px;
+  color: #6c6a1e; /* Brand Accent */
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: opacity 0.3s;
+}
+
+.return-link:hover {
+  opacity: 0.7;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.auth-card h2 {
+  font-family: 'Outfit', sans-serif;
+  color: #2a2b25;
+  font-size: 2rem;
+  margin-top: 0;
+  margin-bottom: 5px;
+}
+
+.auth-subtitle {
+  color: #5a5c51;
+  font-size: 0.95rem;
+  margin-bottom: 30px;
+}
+
+.auth-view.hidden {
+  display: none;
+}
+
+.password-wrapper {
+  position: relative;
+}
+
+.pwd-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #6c6a1e;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.form-options {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+}
+
+.form-options a, .auth-footer a {
+  color: #6c6a1e;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.auth-footer {
+  margin-top: 30px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #5a5c51;
+}
+
+.error-msg, .success-msg {
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: none; /* JS will toggle block */
+}
+.error-msg { background: #fdf2f2; color: #a93226; border: 1px solid #f5c6cb; }
+.success-msg { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+
+/* Override Admin btn-primary to match brand */
+.login-content .btn-primary {
+  background: #6c6a1e;
+  padding: 14px;
+  border-radius: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.login-content .btn-primary:hover {
+  background: #555317;
+}
+
+@media (max-width: 992px) {
+  .login-split { flex-direction: column; }
+  .login-image { flex: 3; }
+  .login-content { flex: 7; padding: 40px; min-width: 0; }
+  .return-link { top: -40px; left: 10px; color: white; }
+}
+
+/* Admin Dashboard Layout */
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.admin-sidebar {
+  width: 250px;
+  background-color: var(--admin-sidebar);
+  color: white;
+  padding: 20px 0;
+  flex-shrink: 0;
+}
+
+.admin-brand {
+  padding: 0 20px 20px;
+  font-size: 1.5rem;
+  font-weight: bold;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  margin-bottom: 20px;
+}
+
+.admin-nav {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.admin-nav li a {
+  display: block;
+  padding: 15px 20px;
+  color: rgba(255,255,255,0.8);
+  text-decoration: none;
+  border-left: 3px solid transparent;
+}
+
+.admin-nav li a:hover, .admin-nav li a.active {
+  background: rgba(255,255,255,0.1);
+  color: white;
+  border-left-color: #E3A857;
+}
+
+.admin-content {
+  flex-grow: 1;
+  padding: 30px;
+  overflow-y: auto;
+}
+
+/* Admin Components */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.page-header h1 {
+  margin: 0;
+}
+
+.card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+/* Forms & Inputs */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--admin-border);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+/* Buttons */
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-primary {
+  background: var(--admin-primary);
+  color: white;
+}
+.btn-success {
+  background: var(--admin-success);
+  color: white;
+}
+.btn-danger {
+  background: var(--admin-danger);
+  color: white;
+}
+.btn-block {
+  display: block;
+  width: 100%;
+}
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--admin-border);
+  color: var(--admin-text);
+}
+
+/* Tables */
+.table-responsive {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+th {
+  background-color: #f9fafb;
+  font-weight: 600;
+}
+
+tr:hover {
+  background-color: #f9fafb;
+}
+
+.badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.badge-pending { background: var(--admin-warning); color: #000; }
+.badge-confirmed { background: var(--admin-success); color: #fff; }
+.badge-cancelled { background: var(--admin-danger); color: #fff; }
+.badge-completed { background: #6c757d; color: #fff; }
+.badge-checkedin { background: #17a2b8; color: #fff; }
+
+/* Filter Bar */
+.filter-bar {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.filter-bar select {
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid var(--admin-border);
+}
+
+/* Room Status Grid */
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.status-card {
+  padding: 20px;
+  border-radius: 8px;
+  background: white;
+  border-left: 5px solid gray;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.status-card h3 {
+  margin: 0 0 15px 0;
+}
+
+.status-Occupied { border-left-color: var(--admin-danger); }
+.status-NeedsCleaning { border-left-color: var(--admin-warning); }
+.status-Ready { border-left-color: var(--admin-success); }
+
+/* Details Layout */
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+}
+@media (max-width: 768px) {
+  .detail-grid { grid-template-columns: 1fr; }
+  .admin-layout { flex-direction: column; }
+  .admin-sidebar { width: 100%; }
+}
+
+.warning-banner {
+  background: #fff3cd;
+  color: #856404;
+  padding: 15px;
+  border-radius: 4px;
+  border: 1px solid #ffeeba;
+  margin-bottom: 20px;
+  display: none;
+}
