@@ -1,48 +1,54 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Room Status - Citi Cabana Admin</title>
-  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/admin.css">
-</head>
-<body>
-  <div class="admin-layout">
-    
-    <aside class="admin-sidebar">
-      <div class="admin-brand">Citi Cabana</div>
-      <ul class="admin-nav">
-        <li><a href="dashboard.html">Dashboard</a></li>
-        <li><a href="bookings.html">Bookings</a></li>
-        <li><a href="room-status.html" class="active">Room Status</a></li>
-        <li><a href="reports.html">Reports</a></li>
-        <li style="margin-top: 15px; font-size: 0.8em; text-transform: uppercase; color: #888; padding-left: 15px;">Content</li>
-        <li><a href="cms.html">Manage Website</a></li>
-        <li style="margin-top: 30px;"><a href="#" onclick="logout()">Logout</a></li>
-      </ul>
-    </aside>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Room Status - Citi Cabana Admin</title>
+    <link rel="stylesheet" href="../css/admin.css" />
+  </head>
+  <body>
+    <div class="admin-layout">
+      <aside class="admin-sidebar">
+        <div class="admin-brand">Citi Cabana</div>
+        <ul class="admin-nav">
+          <li><a href="dashboard.html">Dashboard</a></li>
+          <li><a href="bookings.html">Bookings</a></li>
+          <li><a href="room-status.html" class="active">Room Status</a></li>
+          <li><a href="reports.html">Reports</a></li>
+          <li
+            style="
+              margin-top: 15px;
+              font-size: 0.8em;
+              text-transform: uppercase;
+              color: #888;
+              padding-left: 15px;
+            "
+          >
+            Content
+          </li>
+          <li><a href="cms.html">Manage Website</a></li>
+          <li style="margin-top: 30px">
+            <a href="#" onclick="logout()">Logout</a>
+          </li>
+        </ul>
+      </aside>
 
-    <main class="admin-content">
-      <div class="page-header">
-        <h1>Room Status Board</h1>
-        <button class="btn btn-primary" onclick="initRoomStatusDocs()">Initialize/Reset Rooms</button>
-      </div>
+      <main class="admin-content">
+        <div class="page-header">
+          <h1>Room Status Board</h1>
+          <button class="btn btn-primary" onclick="initRoomStatusDocs()">
+            Refresh Status
+          </button>
+        </div>
 
-      <div id="status-grid" class="status-grid">
-        <!-- Rendered via JS -->
-        <p>Loading status board...</p>
-      </div>
+        <div id="status-grid" class="status-grid">
+          <!-- Rendered via JS -->
+          <p>Loading status board...</p>
+        </div>
+      </main>
+    </div>
 
-    </main>
-
-  </div>
-
-  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
-  <script src="../js/firebase-config.js"></script>
-  <script src="../js/admin-auth.js"></script>
-  <script src="../js/admin.js"></script>
-</body>
+    <script src="../js/local-auth.js"></script>
+    <script src="../js/local-admin.js"></script>
+  </body>
 </html>

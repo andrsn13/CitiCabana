@@ -1,13 +1,26 @@
 // Hub & Spoke Interactivity & Logic
 
 let currentLightboxIndex = 0;
+function escapeHTML(value) {
+  return String(value ?? "").replace(
+    /[&<>"']/g,
+    (character) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      })[character],
+  );
+}
 
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener("DOMContentLoaded", async () => {
   // Phase 2: Load CMS Data before rendering UI
-  if (typeof loadCMSData === 'function') {
+  if (typeof loadCMSData === "function") {
     await loadCMSData();
   }
-  
+
   renderSplitScreenRooms();
   renderEventsSection();
   renderBentoGrid();
@@ -18,149 +31,167 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // IntersectionObserver for Sticky Nav Scrollspy
 function setupScrollspy() {
-  const sections = document.querySelectorAll('section, header');
-  const navLinks = document.querySelectorAll('.nav-link');
+  const sections = document.querySelectorAll("section, header");
+  const navLinks = document.querySelectorAll(".nav-link");
 
   const observerOptions = {
     root: null,
-    rootMargin: '-50% 0px -50% 0px', // Triggers when section is in the middle of the viewport
-    threshold: 0
+    rootMargin: "-50% 0px -50% 0px", // Triggers when section is in the middle of the viewport
+    threshold: 0,
   };
 
   const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
+    entries.forEach((entry) => {
       if (entry.isIntersecting) {
-        const id = entry.target.getAttribute('id');
-        navLinks.forEach(link => {
-          link.classList.remove('active');
-          if (link.getAttribute('href') === `#${id}`) {
-            link.classList.add('active');
+        const id = entry.target.getAttribute("id");
+        navLinks.forEach((link) => {
+          link.classList.remove("active");
+          if (link.getAttribute("href") === `#${id}`) {
+            link.classList.add("active");
           }
         });
       }
     });
   }, observerOptions);
 
-  sections.forEach(section => {
+  sections.forEach((section) => {
     observer.observe(section);
   });
 }
 
 // Render Alternating Editorial Rooms Layout with Bounding Boxes
 function renderSplitScreenRooms() {
-  const container = document.getElementById('rooms-container');
-  const select = document.getElementById('room-type-select');
-  
+  const container = document.getElementById("rooms-container");
+  const select = document.getElementById("room-type-select");
+
   if (!container || !select) return;
 
-  container.innerHTML = ''; // Clear container
+  container.innerHTML = ""; // Clear container
 
-  roomsData.forEach(room => {
+  roomsData.forEach((room) => {
     // Populate dropdown
-    const option = document.createElement('option');
-    option.value = room.name;
-    option.textContent = `${room.name} (₱${room.rate.toLocaleString()})`;
+    const option = document.createElement("option");
+    option.value = room.id;
+    option.textContent = `${room.name} (₱${Number(room.rate).toLocaleString()})`;
     select.appendChild(option);
 
     // Build editorial row
-    const isVilla = room.id === 'villa' || room.name.toLowerCase().includes('villa');
-    const row = document.createElement('div');
-    row.className = `room-row ${isVilla ? 'full-width' : ''}`;
-    
+    const isVilla =
+      room.id === "villa" || room.name.toLowerCase().includes("villa");
+    const row = document.createElement("div");
+    row.className = `room-row ${isVilla ? "full-width" : ""}`;
+
     row.innerHTML = `
       <div class="room-image-pane">
-        <img src="${room.image}" alt="${room.name}">
+        <img src="${escapeHTML(room.image)}" alt="${escapeHTML(room.name)}">
       </div>
       <div class="room-text-pane">
-        <h3 class="display-heading">${room.name}</h3>
-        <div class="room-price">₱${room.rate.toLocaleString()} / night</div>
+        <h3 class="display-heading">${escapeHTML(room.name)}</h3>
+        <div class="room-price">₱${Number(room.rate).toLocaleString()} ${escapeHTML(siteContent.roomNightLabel)}</div>
         <div class="room-meta">
-          <strong>Capacity:</strong> ${room.capacity}<br>
-          <strong>Inclusions:</strong> ${room.inclusions}<br>
-          <span style="display:inline-block; margin-top:10px;">Guests also have full access to general resort amenities including our swimming pool, parking, and food service options.</span>
+          <strong>${escapeHTML(siteContent.roomCapacityLabel)}</strong> ${escapeHTML(room.capacity)}<br>
+          <strong>${escapeHTML(siteContent.roomInclusionsLabel)}</strong> ${escapeHTML(room.inclusions)}<br>
+          <span style="display:inline-block; margin-top:10px;">${escapeHTML(siteContent.roomAmenitiesNote)}</span>
         </div>
         <div>
-          <button class="btn btn-outline" onclick="openBookingModal('room', '${room.name}')">Book This Stay</button>
+          <button class="btn btn-outline book-room-button">${escapeHTML(siteContent.bookThisStay)}</button>
         </div>
       </div>
     `;
+    row
+      .querySelector(".book-room-button")
+      .addEventListener("click", () => openBookingModal("room", room.id));
     container.appendChild(row);
   });
 }
 
 // Render Events Section
 function renderEventsSection() {
-  const container = document.getElementById('events-card-container');
+  const container = document.getElementById("events-card-container");
   if (!container || !eventData) return;
 
   container.innerHTML = `
-    <h2 class="display-heading">${eventData.title}</h2>
-    <p>${eventData.description}</p>
-    <button class="btn btn-primary mt-4" onclick="openBookingModal('event')">Inquire About Events</button>
+    <h2 class="display-heading">${escapeHTML(eventData.title)}</h2>
+    <p>${escapeHTML(eventData.description)}</p>
+    <button class="btn btn-primary mt-4">${escapeHTML(eventData.button || siteContent.eventsButton)}</button>
   `;
+  container
+    .querySelector("button")
+    .addEventListener("click", () => openBookingModal("event"));
 }
 
 // Render Bento Grid (Top 5 images)
 function renderBentoGrid() {
-  const container = document.getElementById('bento-grid-container');
+  const container = document.getElementById("bento-grid-container");
   if (!container || !galleryImages) return;
-  
-  container.innerHTML = ''; // clear
+
+  container.innerHTML = ""; // clear
 
   const topImages = galleryImages.slice(0, 5);
   topImages.forEach((url, index) => {
-    const item = document.createElement('div');
+    const item = document.createElement("div");
     item.className = `bento-item bento-${index + 1}`;
     item.onclick = () => openLightbox(index);
-    item.innerHTML = `<img src="${url}" alt="Gallery Image ${index + 1}">`;
+    const image = document.createElement("img");
+    image.src = url;
+    image.alt =
+      galleryImageAltTexts[index] ||
+      `${siteContent.galleryImageAlt} ${index + 1}`;
+    item.appendChild(image);
     container.appendChild(item);
   });
 }
 
 // Hub Floating Booking Bar Logic
 function triggerBookingFromBar() {
-  const checkin = document.getElementById('bar-checkin').value;
-  const checkout = document.getElementById('bar-checkout').value;
-  const pax = document.getElementById('bar-pax').value;
+  const checkin = document.getElementById("bar-checkin").value;
+  const checkout = document.getElementById("bar-checkout").value;
+  const pax = document.getElementById("bar-pax").value;
 
   // Transfer values to modal form if they exist
-  if (checkin) document.getElementById('room-checkin').value = checkin;
-  if (checkout) document.getElementById('room-checkout').value = checkout;
-  if (pax) document.getElementById('room-pax').value = pax;
+  if (checkin) document.getElementById("room-checkin").value = checkin;
+  if (checkout) document.getElementById("room-checkout").value = checkout;
+  if (pax) document.getElementById("room-pax").value = pax;
 
-  openBookingModal('room');
+  openBookingModal("room");
   calculateOrderSummary();
 }
 
 // Modal Logic
-function openBookingModal(tab = 'room', prefillRoom = null) {
-  const modal = document.getElementById('booking-modal');
-  modal.classList.remove('hidden');
-  document.body.style.overflow = 'hidden'; // Prevent background scroll
-  
+function openBookingModal(tab = "room", prefillRoom = null) {
+  const modal = document.getElementById("booking-modal");
+  modal.classList.remove("hidden");
+  document.body.style.overflow = "hidden"; // Prevent background scroll
+
   switchBookingTab(tab);
-  
+
   if (prefillRoom) {
-    const select = document.getElementById('room-type-select');
+    const select = document.getElementById("room-type-select");
     select.value = prefillRoom;
     calculateOrderSummary();
   }
 }
 
 function openGalleryModal() {
-  const modal = document.getElementById('gallery-modal');
-  modal.classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
-  
-  const grid = document.getElementById('full-gallery-grid');
+  const modal = document.getElementById("gallery-modal");
+  modal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+
+  const grid = document.getElementById("full-gallery-grid");
   if (grid && grid.children.length === 0) {
     // Populate full gallery
     galleryImages.forEach((url, index) => {
-      grid.innerHTML += `
-        <div class="gallery-card" onclick="openLightbox(${index})">
-          <img src="${url}" loading="lazy" alt="Gallery Image ${index + 1}">
-        </div>
-      `;
+      const card = document.createElement("div");
+      card.className = "gallery-card";
+      card.addEventListener("click", () => openLightbox(index));
+      const image = document.createElement("img");
+      image.src = url;
+      image.loading = "lazy";
+      image.alt =
+        galleryImageAltTexts[index] ||
+        `${siteContent.galleryImageAlt} ${index + 1}`;
+      card.appendChild(image);
+      grid.appendChild(card);
     });
   }
 }
@@ -168,96 +199,121 @@ function openGalleryModal() {
 function closeModal(id) {
   const modal = document.getElementById(id);
   if (modal) {
-    modal.classList.add('hidden');
-    document.body.style.overflow = '';
+    modal.classList.add("hidden");
+    document.body.style.overflow = "";
   }
 }
 
 // Vanilla JS Lightbox Logic
 function openLightbox(index) {
   currentLightboxIndex = index;
-  const lightbox = document.getElementById('lightbox');
-  const img = document.getElementById('lightbox-img');
-  
+  const lightbox = document.getElementById("lightbox");
+  const img = document.getElementById("lightbox-img");
+
   img.src = galleryImages[currentLightboxIndex];
-  lightbox.classList.remove('hidden');
+  img.alt =
+    galleryImageAltTexts[currentLightboxIndex] ||
+    `${siteContent.galleryImageAlt} ${currentLightboxIndex + 1}`;
+  lightbox.classList.remove("hidden");
 }
 
 function closeLightbox() {
-  document.getElementById('lightbox').classList.add('hidden');
+  document.getElementById("lightbox").classList.add("hidden");
 }
 
 function nextLightbox() {
   currentLightboxIndex = (currentLightboxIndex + 1) % galleryImages.length;
-  document.getElementById('lightbox-img').src = galleryImages[currentLightboxIndex];
+  document.getElementById("lightbox-img").src =
+    galleryImages[currentLightboxIndex];
 }
 
 function prevLightbox() {
-  currentLightboxIndex = (currentLightboxIndex - 1 + galleryImages.length) % galleryImages.length;
-  document.getElementById('lightbox-img').src = galleryImages[currentLightboxIndex];
+  currentLightboxIndex =
+    (currentLightboxIndex - 1 + galleryImages.length) % galleryImages.length;
+  document.getElementById("lightbox-img").src =
+    galleryImages[currentLightboxIndex];
 }
 
 // Listen for Escape key to close modals/lightbox
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
     closeLightbox();
-    const bModal = document.getElementById('booking-modal');
-    const gModal = document.getElementById('gallery-modal');
-    if (bModal && !bModal.classList.contains('hidden')) closeModal('booking-modal');
-    if (gModal && !gModal.classList.contains('hidden')) closeModal('gallery-modal');
+    const bModal = document.getElementById("booking-modal");
+    const gModal = document.getElementById("gallery-modal");
+    if (bModal && !bModal.classList.contains("hidden"))
+      closeModal("booking-modal");
+    if (gModal && !gModal.classList.contains("hidden"))
+      closeModal("gallery-modal");
   }
 });
 
 // Tab Logic inside Booking Drawer
 function switchBookingTab(tab) {
-  document.getElementById('tab-room').classList.toggle('active', tab === 'room');
-  document.getElementById('tab-event').classList.toggle('active', tab === 'event');
-  
-  document.getElementById('room-form-container').classList.toggle('hidden', tab !== 'room');
-  document.getElementById('event-form-container').classList.toggle('hidden', tab !== 'event');
-  
-  document.getElementById('summary-room-view').classList.toggle('hidden', tab !== 'room');
-  document.getElementById('summary-event-view').classList.toggle('hidden', tab !== 'event');
+  document
+    .getElementById("tab-room")
+    .classList.toggle("active", tab === "room");
+  document
+    .getElementById("tab-event")
+    .classList.toggle("active", tab === "event");
+
+  document
+    .getElementById("room-form-container")
+    .classList.toggle("hidden", tab !== "room");
+  document
+    .getElementById("event-form-container")
+    .classList.toggle("hidden", tab !== "event");
+
+  document
+    .getElementById("summary-room-view")
+    .classList.toggle("hidden", tab !== "room");
+  document
+    .getElementById("summary-event-view")
+    .classList.toggle("hidden", tab !== "event");
 }
 
 // Live Order Summary Calculation
 function setupOrderSummaryListeners() {
-  const checkinInput = document.getElementById('room-checkin');
-  const checkoutInput = document.getElementById('room-checkout');
-  const typeSelect = document.getElementById('room-type-select');
+  const checkinInput = document.getElementById("room-checkin");
+  const checkoutInput = document.getElementById("room-checkout");
+  const typeSelect = document.getElementById("room-type-select");
 
-  if(checkinInput) checkinInput.addEventListener('change', calculateOrderSummary);
-  if(checkoutInput) checkoutInput.addEventListener('change', calculateOrderSummary);
-  if(typeSelect) typeSelect.addEventListener('change', calculateOrderSummary);
+  if (checkinInput)
+    checkinInput.addEventListener("change", calculateOrderSummary);
+  if (checkoutInput)
+    checkoutInput.addEventListener("change", calculateOrderSummary);
+  if (typeSelect) typeSelect.addEventListener("change", calculateOrderSummary);
 }
 
 function calculateOrderSummary() {
-  const checkin = document.getElementById('room-checkin').value;
-  const checkout = document.getElementById('room-checkout').value;
-  const roomName = document.getElementById('room-type-select').value;
-  
-  const sumRoomName = document.getElementById('sum-room-name');
-  const sumDates = document.getElementById('sum-dates');
-  const sumNights = document.getElementById('sum-nights');
-  const sumTotal = document.getElementById('sum-total');
-  
+  const checkin = document.getElementById("room-checkin").value;
+  const checkout = document.getElementById("room-checkout").value;
+  const roomName = document.getElementById("room-type-select").value;
+
+  const sumRoomName = document.getElementById("sum-room-name");
+  const sumDates = document.getElementById("sum-dates");
+  const sumNights = document.getElementById("sum-nights");
+  const sumTotal = document.getElementById("sum-total");
+
   let rate = 0;
-  
+
   if (roomName) {
-    sumRoomName.textContent = roomName;
-    const roomObj = roomsData.find(r => r.name === roomName);
+    const roomObj = roomsData.find((r) => r.id === roomName);
     if (roomObj) {
-      rate = roomObj.rate;
+      sumRoomName.textContent = roomObj.name;
+      rate = Number(roomObj.rate);
       // Inject room image into summary
-      const imgContainer = document.querySelector('.summary-img-placeholder');
+      const imgContainer = document.querySelector(".summary-img-placeholder");
       if (imgContainer) {
-        imgContainer.innerHTML = `<img src="${roomObj.image}" alt="${roomObj.name}">`;
+        const image = document.createElement("img");
+        image.src = roomObj.image;
+        image.alt = roomObj.name;
+        imgContainer.replaceChildren(image);
       }
     }
   } else {
-    sumRoomName.textContent = "Not selected";
-    const imgContainer = document.querySelector('.summary-img-placeholder');
-    if (imgContainer) imgContainer.innerHTML = 'Select a room';
+    sumRoomName.textContent = siteContent.roomSummaryNotSelected;
+    const imgContainer = document.querySelector(".summary-img-placeholder");
+    if (imgContainer) imgContainer.textContent = siteContent.roomSummaryEmpty;
   }
 
   let nights = 0;
@@ -268,34 +324,34 @@ function calculateOrderSummary() {
     if (d2 > d1) {
       nights = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
     } else {
-      sumDates.textContent = "Invalid dates";
+      sumDates.textContent = siteContent.invalidDates;
     }
   } else {
     sumDates.textContent = "-";
   }
 
   sumNights.textContent = nights;
-  
+
   const total = nights * rate;
   sumTotal.textContent = `₱${total.toLocaleString()}`;
 }
 
 function formatShortDate(dateStr) {
   const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 // Mobile Menu
 function setupMobileMenu() {
-  const btn = document.getElementById('mobile-menu-btn');
-  const nav = document.querySelector('.nav-links');
+  const btn = document.getElementById("mobile-menu-btn");
+  const nav = document.querySelector(".nav-links");
   if (btn && nav) {
-    btn.addEventListener('click', () => {
-      nav.classList.toggle('show');
+    btn.addEventListener("click", () => {
+      nav.classList.toggle("show");
     });
     // Close menu when a link is clicked
-    nav.querySelectorAll('.nav-link').forEach(link => {
-      link.addEventListener('click', () => nav.classList.remove('show'));
+    nav.querySelectorAll(".nav-link").forEach((link) => {
+      link.addEventListener("click", () => nav.classList.remove("show"));
     });
   }
 }

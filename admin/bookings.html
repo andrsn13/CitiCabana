@@ -1,117 +1,161 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bookings - Citi Cabana Admin</title>
-  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/admin.css">
-</head>
-<body>
-  <div class="admin-layout">
-    
-    <aside class="admin-sidebar">
-      <div class="admin-brand">Citi Cabana</div>
-      <ul class="admin-nav">
-        <li><a href="dashboard.html">Dashboard</a></li>
-        <li><a href="bookings.html" class="active">Bookings</a></li>
-        <li><a href="room-status.html">Room Status</a></li>
-        <li><a href="reports.html">Reports</a></li>
-        <li style="margin-top: 15px; font-size: 0.8em; text-transform: uppercase; color: #888; padding-left: 15px;">Content</li>
-        <li><a href="cms.html">Manage Website</a></li>
-        <li style="margin-top: 30px;"><a href="#" onclick="logout()">Logout</a></li>
-      </ul>
-    </aside>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bookings - Citi Cabana Admin</title>
+    <link rel="stylesheet" href="../css/admin.css" />
+  </head>
+  <body>
+    <div class="admin-layout">
+      <aside class="admin-sidebar">
+        <div class="admin-brand">Citi Cabana</div>
+        <ul class="admin-nav">
+          <li><a href="dashboard.html">Dashboard</a></li>
+          <li><a href="bookings.html" class="active">Bookings</a></li>
+          <li><a href="room-status.html">Room Status</a></li>
+          <li><a href="reports.html">Reports</a></li>
+          <li
+            style="
+              margin-top: 15px;
+              font-size: 0.8em;
+              text-transform: uppercase;
+              color: #888;
+              padding-left: 15px;
+            "
+          >
+            Content
+          </li>
+          <li><a href="cms.html">Manage Website</a></li>
+          <li style="margin-top: 30px">
+            <a href="#" onclick="logout()">Logout</a>
+          </li>
+        </ul>
+      </aside>
 
-    <main class="admin-content">
-      <div class="page-header">
-        <h1>Bookings</h1>
-        <a href="#add-booking" class="btn btn-success" onclick="toggleAddWalkin()">+ Add Walk-in / Phone Booking</a>
-      </div>
-
-      <!-- Add Walk-in Form (Hidden by default) -->
-      <div id="add-walkin-container" class="card" style="display:none; margin-bottom: 30px; background: #eef2f5;">
-        <h2>Log Manual Booking</h2>
-        <form id="add-walkin-form">
-          <div class="detail-grid">
-            <div class="form-group">
-              <label>Booking Type</label>
-              <select id="walkin-type" required onchange="toggleWalkinFields()">
-                <option value="room">Room</option>
-                <option value="event">Event</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Guest Name</label>
-              <input type="text" id="walkin-name" required>
-            </div>
-          </div>
-          
-          <!-- Room fields -->
-          <div id="walkin-room-fields" class="detail-grid">
-            <div class="form-group"><label>Room Type</label><input type="text" id="walkin-room-type"></div>
-            <div class="form-group"><label>Check-in</label><input type="date" id="walkin-checkin"></div>
-            <div class="form-group"><label>Check-out</label><input type="date" id="walkin-checkout"></div>
-          </div>
-          
-          <!-- Event fields -->
-          <div id="walkin-event-fields" class="detail-grid" style="display:none;">
-            <div class="form-group"><label>Event Type</label><input type="text" id="walkin-event-type"></div>
-            <div class="form-group"><label>Event Date</label><input type="date" id="walkin-event-date"></div>
-          </div>
-          
-          <button type="submit" class="btn btn-primary">Save Booking</button>
-          <button type="button" class="btn btn-outline" onclick="toggleAddWalkin()">Cancel</button>
-        </form>
-      </div>
-
-      <div class="card">
-        <div class="filter-bar">
-          <label><strong>Filter:</strong></label>
-          <select id="filter-status">
-            <option value="All">All Statuses</option>
-            <option value="Pending">Pending</option>
-            <option value="Confirmed">Confirmed</option>
-            <option value="CheckedIn">Checked In</option>
-            <option value="Completed">Completed</option>
-            <option value="Cancelled">Cancelled</option>
-          </select>
-          
-          <select id="filter-type">
-            <option value="All">All Types</option>
-            <option value="room">Rooms</option>
-            <option value="event">Events</option>
-          </select>
+      <main class="admin-content">
+        <div class="page-header">
+          <h1>Bookings</h1>
+          <a
+            href="#add-booking"
+            class="btn btn-success"
+            onclick="toggleAddWalkin()"
+            >+ Add Walk-in / Phone Booking</a
+          >
         </div>
 
-        <div class="table-responsive">
-          <table id="bookings-table">
-            <thead>
-              <tr>
-                <th>Date Placed</th>
-                <th>Guest</th>
-                <th>Type / Details</th>
-                <th>Dates</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="bookings-tbody">
-              <!-- Rendered via JS -->
-              <tr><td colspan="6" class="text-center">Loading bookings...</td></tr>
-            </tbody>
-          </table>
+        <!-- Add Walk-in Form (Hidden by default) -->
+        <div
+          id="add-walkin-container"
+          class="card"
+          style="display: none; margin-bottom: 30px; background: #eef2f5"
+        >
+          <h2>Log Manual Booking</h2>
+          <form id="add-walkin-form">
+            <div class="detail-grid">
+              <div class="form-group">
+                <label>Booking Type</label>
+                <select
+                  id="walkin-type"
+                  required
+                  onchange="toggleWalkinFields()"
+                >
+                  <option value="room">Room</option>
+                  <option value="event">Event</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Guest Name</label>
+                <input type="text" id="walkin-name" required />
+              </div>
+            </div>
+
+            <!-- Room fields -->
+            <div id="walkin-room-fields" class="detail-grid">
+              <div class="form-group">
+                <label>Room Type</label
+                ><input type="text" id="walkin-room-type" />
+              </div>
+              <div class="form-group">
+                <label>Check-in</label><input type="date" id="walkin-checkin" />
+              </div>
+              <div class="form-group">
+                <label>Check-out</label
+                ><input type="date" id="walkin-checkout" />
+              </div>
+            </div>
+
+            <!-- Event fields -->
+            <div
+              id="walkin-event-fields"
+              class="detail-grid"
+              style="display: none"
+            >
+              <div class="form-group">
+                <label>Event Type</label
+                ><input type="text" id="walkin-event-type" />
+              </div>
+              <div class="form-group">
+                <label>Event Date</label
+                ><input type="date" id="walkin-event-date" />
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save Booking</button>
+            <button
+              type="button"
+              class="btn btn-outline"
+              onclick="toggleAddWalkin()"
+            >
+              Cancel
+            </button>
+          </form>
         </div>
-      </div>
-    </main>
 
-  </div>
+        <div class="card">
+          <div class="filter-bar">
+            <label><strong>Filter:</strong></label>
+            <select id="filter-status">
+              <option value="All">All Statuses</option>
+              <option value="Pending">Pending</option>
+              <option value="Confirmed">Confirmed</option>
+              <option value="CheckedIn">Checked In</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
 
-  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
-  <script src="../js/firebase-config.js"></script>
-  <script src="../js/admin-auth.js"></script>
-  <script src="../js/admin.js"></script>
-</body>
+            <select id="filter-type">
+              <option value="All">All Types</option>
+              <option value="room">Rooms</option>
+              <option value="event">Events</option>
+            </select>
+          </div>
+
+          <div class="table-responsive">
+            <table id="bookings-table">
+              <thead>
+                <tr>
+                  <th>Date Placed</th>
+                  <th>Guest</th>
+                  <th>Type / Details</th>
+                  <th>Dates</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="bookings-tbody">
+                <!-- Rendered via JS -->
+                <tr>
+                  <td colspan="6" class="text-center">Loading bookings...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script src="../js/local-auth.js"></script>
+    <script src="../js/local-admin.js"></script>
+  </body>
 </html>

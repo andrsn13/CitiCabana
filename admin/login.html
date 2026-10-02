@@ -1,113 +1,87 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Login - Citi Cabana</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/admin.css">
-</head>
-<body class="login-body">
-  
-  <div class="login-split">
-    <!-- Left Pane: Branding -->
-    <div class="login-image" style="background-image: url('https://images.unsplash.com/photo-1540541338287-41700207dee6?q=80&w=1200');">
-      <div class="login-image-overlay">
-        <h1 class="login-brand-title">Citi Cabana</h1>
-        <p class="login-brand-subtitle">Management Portal</p>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Login - Citi Cabana</title>
+    <link rel="stylesheet" href="../css/admin.css" />
+  </head>
+  <body class="login-body">
+    <div class="login-split">
+      <!-- Left Pane: Branding -->
+      <div
+        class="login-image"
+        style="background-image: url(&quot;/images/hero.jpg&quot;)"
+      >
+        <div class="login-image-overlay">
+          <h1 class="login-brand-title">Citi Cabana</h1>
+          <p class="login-brand-subtitle">Management Portal</p>
+        </div>
       </div>
-    </div>
 
-    <!-- Right Pane: Forms -->
-    <div class="login-content">
-      <a href="../index.html" class="return-link">&larr; Return to Public Website</a>
-      
-      <div class="auth-card">
-        
-        <!-- Form 1: SIGN IN -->
-        <div id="view-signin" class="auth-view">
-          <h2>Sign In</h2>
-          <p class="auth-subtitle">Welcome back. Please enter your details.</p>
-          <div id="login-error" class="error-msg">Login failed.</div>
-          
-          <form id="login-form">
-            <div class="form-group">
-              <label for="login-email">Email Address</label>
-              <input type="email" id="login-email" required>
-            </div>
-            <div class="form-group">
-              <label for="login-password">Password</label>
-              <div class="password-wrapper">
-                <input type="password" id="login-password" required>
-                <button type="button" class="pwd-toggle" onclick="togglePwd('login-password')">Show</button>
+      <!-- Right Pane: Forms -->
+      <div class="login-content">
+        <a href="../index.html" class="return-link"
+          >&larr; Return to Public Website</a
+        >
+
+        <div class="auth-card">
+          <!-- Form 1: SIGN IN -->
+          <div id="view-signin" class="auth-view">
+            <h2>Sign In</h2>
+            <p class="auth-subtitle" id="auth-subtitle">
+              Welcome back. Please enter your details.
+            </p>
+            <div id="login-error" class="error-msg hidden" role="alert"></div>
+
+            <form id="login-form">
+              <div class="form-group">
+                <label for="login-email">Email Address</label>
+                <input type="email" id="login-email" required />
               </div>
-            </div>
-            <div class="form-options">
-              <a href="#" onclick="switchAuthView('view-reset')">Forgot password?</a>
-            </div>
-            <button type="submit" class="btn btn-primary btn-block">Sign In</button>
-          </form>
-          
-          <div class="auth-footer" style="padding-bottom: 24px;">
+              <div class="form-group">
+                <label for="login-password">Password</label>
+                <div class="password-wrapper">
+                  <input
+                    type="password"
+                    id="login-password"
+                    required
+                    autocomplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    class="pwd-toggle"
+                    onclick="togglePwd('login-password')"
+                  >
+                    Show
+                  </button>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary btn-block">
+                <span id="login-submit-label">Sign In</span>
+              </button>
+            </form>
+
+            <div class="auth-footer" style="padding-bottom: 24px"></div>
           </div>
         </div>
-
-
-
-        <!-- Form 3: RESET PASSWORD -->
-        <div id="view-reset" class="auth-view hidden">
-          <h2>Reset Password</h2>
-          <p class="auth-subtitle">Enter your email and we'll send you a reset link.</p>
-          <div id="reset-error" class="error-msg">Failed to send reset link.</div>
-          <div id="reset-success" class="success-msg hidden">Reset link sent. Please check your inbox.</div>
-          
-          <form id="reset-form">
-            <div class="form-group">
-              <label for="reset-email">Email Address</label>
-              <input type="email" id="reset-email" required>
-            </div>
-            <button type="submit" class="btn btn-primary btn-block">Send Reset Link</button>
-          </form>
-          
-          <div class="auth-footer">
-            <p><a href="#" onclick="switchAuthView('view-signin')">&larr; Back to Sign In</a></p>
-          </div>
-        </div>
-
       </div>
     </div>
-  </div>
-  
-  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
-  <script src="../js/firebase-config.js"></script>
-  <script src="../js/admin-auth.js"></script>
-  
-  <script>
-    // Simple UI Toggles (Firebase logic is in admin-auth.js)
-    function switchAuthView(viewId) {
-      document.querySelectorAll('.auth-view').forEach(view => view.classList.add('hidden'));
-      document.getElementById(viewId).classList.remove('hidden');
-      
-      // Clear messages
-      document.querySelectorAll('.error-msg, .success-msg').forEach(msg => {
-        msg.style.display = 'none';
-        msg.classList.add('hidden');
-      });
-    }
-    
-    function togglePwd(inputId) {
-      const input = document.getElementById(inputId);
-      const btn = input.nextElementSibling;
-      if (input.type === 'password') {
-        input.type = 'text';
-        btn.textContent = 'Hide';
-      } else {
-        input.type = 'password';
-        btn.textContent = 'Show';
+
+    <script src="../js/local-auth.js"></script>
+
+    <script>
+      function togglePwd(inputId) {
+        const input = document.getElementById(inputId);
+        const btn = input.nextElementSibling;
+        if (input.type === "password") {
+          input.type = "text";
+          btn.textContent = "Hide";
+        } else {
+          input.type = "password";
+          btn.textContent = "Show";
+        }
       }
-    }
-  </script>
-</body>
+    </script>
+  </body>
 </html>

@@ -1,64 +1,94 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reports - Citi Cabana Admin</title>
-  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/admin.css">
-</head>
-<body>
-  <div class="admin-layout">
-    
-    <aside class="admin-sidebar">
-      <div class="admin-brand">Citi Cabana</div>
-      <ul class="admin-nav">
-        <li><a href="dashboard.html">Dashboard</a></li>
-        <li><a href="bookings.html">Bookings</a></li>
-        <li><a href="room-status.html">Room Status</a></li>
-        <li><a href="reports.html" class="active">Reports</a></li>
-        <li style="margin-top: 15px; font-size: 0.8em; text-transform: uppercase; color: #888; padding-left: 15px;">Content</li>
-        <li><a href="cms.html">Manage Website</a></li>
-        <li style="margin-top: 30px;"><a href="#" onclick="logout()">Logout</a></li>
-      </ul>
-    </aside>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reports - Citi Cabana Admin</title>
+    <link rel="stylesheet" href="../css/admin.css" />
+  </head>
+  <body>
+    <div class="admin-layout">
+      <aside class="admin-sidebar">
+        <div class="admin-brand">Citi Cabana</div>
+        <ul class="admin-nav">
+          <li><a href="dashboard.html">Dashboard</a></li>
+          <li><a href="bookings.html">Bookings</a></li>
+          <li><a href="room-status.html">Room Status</a></li>
+          <li><a href="reports.html" class="active">Reports</a></li>
+          <li
+            style="
+              margin-top: 15px;
+              font-size: 0.8em;
+              text-transform: uppercase;
+              color: #888;
+              padding-left: 15px;
+            "
+          >
+            Content
+          </li>
+          <li><a href="cms.html">Manage Website</a></li>
+          <li style="margin-top: 30px">
+            <a href="#" onclick="logout()">Logout</a>
+          </li>
+        </ul>
+      </aside>
 
-    <main class="admin-content">
-      <div class="page-header">
-        <h1>Reports</h1>
-      </div>
-
-      <div class="card">
-        <form id="report-form" class="filter-bar" style="align-items: flex-end;">
-          <div>
-            <label style="display:block; margin-bottom:5px; font-weight:bold;">Start Date (Created)</label>
-            <input type="date" id="report-start" required style="padding:8px; border:1px solid #ccc; border-radius:4px;">
-          </div>
-          <div>
-            <label style="display:block; margin-bottom:5px; font-weight:bold;">End Date (Created)</label>
-            <input type="date" id="report-end" required style="padding:8px; border:1px solid #ccc; border-radius:4px;">
-          </div>
-          <button type="submit" class="btn btn-primary">Generate</button>
-        </form>
-      </div>
-
-      <div class="detail-grid" id="report-results" style="display:none;">
-        <div class="card">
-          <h2>Summary</h2>
-          <p><strong>Total Confirmed Bookings:</strong> <span id="report-total-bookings">0</span></p>
-          <p><strong>Total Downpayments (₱):</strong> <span id="report-total-dp">0</span></p>
+      <main class="admin-content">
+        <div class="page-header">
+          <h1>Reports</h1>
         </div>
-      </div>
 
-    </main>
+        <div class="card">
+          <form
+            id="report-form"
+            class="filter-bar"
+            style="align-items: flex-end"
+          >
+            <div>
+              <label
+                style="display: block; margin-bottom: 5px; font-weight: bold"
+                >Start Date (Created)</label
+              >
+              <input
+                type="date"
+                id="report-start"
+                required
+                style="padding: 8px; border: 1px solid #ccc; border-radius: 4px"
+              />
+            </div>
+            <div>
+              <label
+                style="display: block; margin-bottom: 5px; font-weight: bold"
+                >End Date (Created)</label
+              >
+              <input
+                type="date"
+                id="report-end"
+                required
+                style="padding: 8px; border: 1px solid #ccc; border-radius: 4px"
+              />
+            </div>
+            <button type="submit" class="btn btn-primary">Generate</button>
+          </form>
+        </div>
 
-  </div>
+        <div class="detail-grid" id="report-results" style="display: none">
+          <div class="card">
+            <h2>Summary</h2>
+            <p>
+              <strong>Total Confirmed Bookings:</strong>
+              <span id="report-total-bookings">0</span>
+            </p>
+            <p>
+              <strong>Total Downpayments (₱):</strong>
+              <span id="report-total-dp">0</span>
+            </p>
+          </div>
+        </div>
+      </main>
+    </div>
 
-  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
-  <script src="../js/firebase-config.js"></script>
-  <script src="../js/admin-auth.js"></script>
-  <script src="../js/admin.js"></script>
-</body>
+    <script src="../js/local-auth.js"></script>
+    <script src="../js/local-admin.js"></script>
+  </body>
 </html>

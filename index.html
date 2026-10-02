@@ -1,329 +1,587 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Citi Cabana Farm House Inn</title>
-  <meta name="description" content="Your fun and peaceful escape from the everyday rush. Discover good vibes, tropical feels, and unforgettable moments!">
-  
-  <!-- Typography: Montserrat for UI, Outfit as a geometric fallback for Rigot -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
-  <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-  <!-- Navigation (Hub) -->
-  <nav id="navbar">
-    <div class="nav-container">
-      <div class="nav-brand">Citi Cabana</div>
-      <ul class="nav-links">
-        <li><a href="#rooms" class="nav-link">Rooms</a></li>
-        <li><a href="#events" class="nav-link">Events</a></li>
-        <li><a href="#gallery" class="nav-link">Gallery</a></li>
-        <li><button class="btn btn-outline-nav" onclick="openBookingModal()">Book Now</button></li>
-      </ul>
-      <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Toggle menu">☰</button>
-    </div>
-  </nav>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title data-content="pageTitle">Citi Cabana Farm House Inn</title>
+    <meta
+      name="description"
+      content="Your fun and peaceful escape from the everyday rush. Discover good vibes, tropical feels, and unforgettable moments!"
+    />
 
-  <!-- Hero Section with Floating Booking Bar -->
-  <header id="home" class="hero" style="background-image: linear-gradient(rgba(42, 43, 37, 0.4), rgba(42, 43, 37, 0.4)), url('https://images.unsplash.com/photo-1540541338287-41700207dee6?q=80&w=1920');">
-    <div class="hero-content">
-      <h1 class="display-title">Citi Cabana</h1>
-      <p class="tagline">Your fun and peaceful escape from the everyday rush.</p>
-    </div>
-    
-    <!-- Floating Booking Bar -->
-    <div class="floating-booking-bar">
-      <div class="booking-bar-fields">
-        <div class="bar-field">
-          <label>Check-in</label>
-          <input type="date" id="bar-checkin">
-        </div>
-        <div class="bar-field">
-          <label>Check-out</label>
-          <input type="date" id="bar-checkout">
-        </div>
-        <div class="bar-field">
-          <label>Guests</label>
-          <input type="number" id="bar-pax" min="1" value="2">
-        </div>
-        <button class="btn btn-primary" onclick="triggerBookingFromBar()">Check Availability</button>
-      </div>
-    </div>
-  </header>
-
-  <!-- Rooms Section (Alternating Split Screen) -->
-  <section id="rooms" class="section bg-sand">
-    <div class="container-fluid">
-      <div class="section-header text-center">
-        <h2 class="display-heading">Stay With Us</h2>
-        <p class="section-subtitle">Discover good vibes and tropical feels.</p>
-      </div>
-      <div id="rooms-container" class="rooms-editorial-layout">
-        <!-- Rendered via JS in alternating split-screen -->
-      </div>
-    </div>
-  </section>
-
-  <!-- Events Section (Parallax Window) -->
-  <section id="events" class="parallax-section" style="background-image: url('https://images.unsplash.com/photo-1519225421980-715cb0215aed?q=80&w=1920');">
-    <div class="parallax-content">
-      <div class="glass-card" id="events-card-container">
-        <!-- Rendered via JS -->
-      </div>
-    </div>
-  </section>
-
-  <!-- Gallery Section (Bento Box Hub Teaser) -->
-  <section id="gallery" class="section bg-white">
-    <div class="container">
-      <div class="section-header text-center">
-        <h2 class="display-heading">The Experience</h2>
-      </div>
-      <div class="bento-grid" id="bento-grid-container">
-        <!-- Rendered via JS -->
-      </div>
-      <div class="text-center mt-4 pt-4">
-        <button class="btn btn-outline" onclick="openGalleryModal()">View Full Gallery</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- Contact Section / Footer -->
-  <footer id="contact" class="footer bg-charcoal">
-    <div class="container footer-grid">
-      <div class="footer-brand">
-        <h2 class="display-heading text-sand">Citi Cabana</h2>
-        <p>Zone 1, Peter Jay Dunca Street<br>San Isidro, Tarlac City<br><small>Landmark: 7-Eleven San Isidro, after the San Isidro Bridge</small></p>
-        <div class="social-links mt-4">
-          <a href="https://www.facebook.com/share/1Ge1EiLjvU/?mibextid=wwXIfr" target="_blank" class="text-accent">Follow on Facebook</a>
-        </div>
-      </div>
-      <div class="footer-contact">
-        <h3>Contact</h3>
-        <p>0912-785-5801<br>0907-754-8567</p>
-        <p><a href="mailto:citicabana31@gmail.com" class="text-sand">citicabana31@gmail.com</a></p>
-      </div>
-      <div class="footer-policies">
-        <h3>Policies</h3>
-        <ul>
-          <li>Check-in: 2:00 PM | Check-out: 12:00 NN</li>
-          <li>50% downpayment required to confirm</li>
-          <li>Cash, GCash, Bank transfer accepted</li>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <!-- Navigation (Hub) -->
+    <nav id="navbar">
+      <div class="nav-container">
+        <div class="nav-brand" data-content="brandName">Citi Cabana</div>
+        <ul class="nav-links">
+          <li>
+            <a href="#rooms" class="nav-link" data-content="navRooms">Rooms</a>
+          </li>
+          <li>
+            <a href="#events" class="nav-link" data-content="navEvents"
+              >Events</a
+            >
+          </li>
+          <li>
+            <a href="#gallery" class="nav-link" data-content="navGallery"
+              >Gallery</a
+            >
+          </li>
+          <li>
+            <button
+              class="btn btn-outline-nav"
+              onclick="openBookingModal()"
+              data-content="navBook"
+            >
+              Book Now
+            </button>
+          </li>
         </ul>
+        <button
+          class="mobile-menu-btn"
+          id="mobile-menu-btn"
+          aria-label="Toggle menu"
+          data-content-aria-label="menuToggle"
+        >
+          ☰
+        </button>
       </div>
-    </div>
-  </footer>
+    </nav>
 
-  <!-- ==========================================
+    <!-- Hero Section with Floating Booking Bar -->
+    <header
+      id="home"
+      class="hero"
+      data-content-background="heroImage"
+      style="
+        background-image:
+          linear-gradient(rgba(42, 43, 37, 0.4), rgba(42, 43, 37, 0.4)),
+          url(&quot;/images/hero.jpg&quot;);
+      "
+    >
+      <div class="hero-content">
+        <h1 class="display-title" data-content="heroTitle">Citi Cabana</h1>
+        <p class="tagline" data-content="heroTagline">
+          Your fun and peaceful escape from the everyday rush.
+        </p>
+      </div>
+
+      <!-- Floating Booking Bar -->
+      <div class="floating-booking-bar">
+        <div class="booking-bar-fields">
+          <div class="bar-field">
+            <label data-content="barCheckin">Check-in</label>
+            <input type="date" id="bar-checkin" />
+          </div>
+          <div class="bar-field">
+            <label data-content="barCheckout">Check-out</label>
+            <input type="date" id="bar-checkout" />
+          </div>
+          <div class="bar-field">
+            <label data-content="barGuests">Guests</label>
+            <input type="number" id="bar-pax" min="1" value="2" />
+          </div>
+          <button
+            class="btn btn-primary"
+            onclick="triggerBookingFromBar()"
+            data-content="barAvailability"
+          >
+            Check Availability
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Rooms Section (Alternating Split Screen) -->
+    <section id="rooms" class="section bg-sand">
+      <div class="container-fluid">
+        <div class="section-header text-center">
+          <h2 class="display-heading" data-content="roomsTitle">
+            Stay With Us
+          </h2>
+          <p class="section-subtitle" data-content="roomsSubtitle">
+            Discover good vibes and tropical feels.
+          </p>
+        </div>
+        <div id="rooms-container" class="rooms-editorial-layout">
+          <!-- Rendered via JS in alternating split-screen -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Events Section (Parallax Window) -->
+    <section
+      id="events"
+      class="parallax-section"
+      data-content-background="eventsImage"
+      style="background-image: url(&quot;/images/events.jpg&quot;)"
+    >
+      <div class="parallax-content">
+        <div class="glass-card" id="events-card-container">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Gallery Section (Bento Box Hub Teaser) -->
+    <section id="gallery" class="section bg-white">
+      <div class="container">
+        <div class="section-header text-center">
+          <h2 class="display-heading" data-content="galleryTitle">
+            The Experience
+          </h2>
+        </div>
+        <div class="bento-grid" id="bento-grid-container">
+          <!-- Rendered via JS -->
+        </div>
+        <div class="text-center mt-4 pt-4">
+          <button
+            class="btn btn-outline"
+            onclick="openGalleryModal()"
+            data-content="galleryButton"
+          >
+            View Full Gallery
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contact Section / Footer -->
+    <footer id="contact" class="footer bg-charcoal">
+      <div class="container footer-grid">
+        <div class="footer-brand">
+          <h2 class="display-heading text-sand" data-content="brandName">
+            Citi Cabana
+          </h2>
+          <p>
+            <span data-content="address"
+              >Zone 1, Peter Jay Dunca Street<br />San Isidro, Tarlac City</span
+            ><br /><small data-content="landmark"
+              >Landmark: 7-Eleven San Isidro, after the San Isidro Bridge</small
+            >
+          </p>
+          <div class="social-links mt-4">
+            <a
+              href="https://www.facebook.com/share/1Ge1EiLjvU/?mibextid=wwXIfr"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-accent"
+              data-content="facebookLabel"
+              data-content-href="facebookUrl"
+              >Follow on Facebook</a
+            >
+          </div>
+        </div>
+        <div class="footer-contact">
+          <h3 data-content="contactTitle">Contact</h3>
+          <p>
+            <span data-content="phonePrimary">0912-785-5801</span><br /><span
+              data-content="phoneSecondary"
+              >0907-754-8567</span
+            >
+          </p>
+          <p>
+            <a
+              href="mailto:citicabana31@gmail.com"
+              class="text-sand"
+              data-content="contactEmail"
+              data-content-href="contactEmail"
+              >citicabana31@gmail.com</a
+            >
+          </p>
+        </div>
+        <div class="footer-policies">
+          <h3 data-content="policiesTitle">Policies</h3>
+          <ul>
+            <li data-content="checkinPolicy">
+              Check-in: 2:00 PM | Check-out: 12:00 NN
+            </li>
+            <li data-content="downpaymentPolicy">
+              50% downpayment required to confirm
+            </li>
+            <li data-content="paymentPolicy">
+              Cash, GCash, Bank transfer accepted
+            </li>
+          </ul>
+        </div>
+      </div>
+    </footer>
+
+    <!-- ==========================================
        HUB & SPOKE OVERLAYS (MODALS/DRAWERS)
        ========================================== -->
 
-  <!-- 1. Booking Drawer (Split View UI) -->
-  <div id="booking-modal" class="modal-overlay hidden">
-    <div class="modal-drawer right-drawer">
-      <button class="modal-close" onclick="closeModal('booking-modal')">×</button>
-      
-      <div class="modal-split">
-        <!-- Left: Forms -->
-        <div class="modal-form-side">
-          <div class="booking-tabs">
-            <button class="tab-btn active" id="tab-room" onclick="switchBookingTab('room')">Book a Room</button>
-            <button class="tab-btn" id="tab-event" onclick="switchBookingTab('event')">Book an Event</button>
-          </div>
+    <!-- 1. Booking Drawer (Split View UI) -->
+    <div id="booking-modal" class="modal-overlay hidden">
+      <div class="modal-drawer right-drawer">
+        <button
+          class="modal-close"
+          aria-label="Close booking window"
+          data-content-aria-label="closeBookingLabel"
+          onclick="closeModal('booking-modal')"
+        >
+          ×
+        </button>
 
-          <!-- Room Form -->
-          <div id="room-form-container">
-            <div id="room-success-msg" class="success-msg hidden">
-              <h3 class="display-heading text-accent">Thank you!</h3>
-              <p>Your request is pending confirmation. Our staff will contact you shortly.</p>
-              <button class="btn btn-outline mt-4" onclick="resetRoomForm()">Submit another request</button>
-            </div>
-            
-            <form id="room-booking-form" class="booking-form">
-              <div class="form-section">
-                <h3>1. Your Stay</h3>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label>Check-in *</label>
-                    <input type="date" id="room-checkin" required>
-                  </div>
-                  <div class="form-group">
-                    <label>Check-out *</label>
-                    <input type="date" id="room-checkout" required>
-                  </div>
-                </div>
-                <div class="form-error" id="room-date-error">Check-out must be after check-in.</div>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label>Room Type *</label>
-                    <select id="room-type-select" required>
-                      <option value="">Select a room...</option>
-                      <!-- JS Populated -->
-                    </select>
-                  </div>
-                  <div class="form-group">
-                    <label>Guests *</label>
-                    <input type="number" id="room-pax" min="1" value="2" required>
-                  </div>
-                </div>
-              </div>
-
-              <div class="form-section">
-                <h3>2. Your Details</h3>
-                <div class="form-group">
-                  <label>Full Name *</label>
-                  <input type="text" id="room-name" required>
-                </div>
-                <div class="form-group">
-                  <label>Contact Number *</label>
-                  <input type="tel" id="room-contact" required>
-                </div>
-                <div class="form-group">
-                  <label>Notes (Optional)</label>
-                  <textarea id="room-notes" rows="2"></textarea>
-                </div>
-              </div>
-              <button type="submit" class="btn btn-primary btn-block">Submit Reservation Request</button>
-            </form>
-          </div>
-
-          <!-- Event Form -->
-          <div id="event-form-container" class="hidden">
-            <div id="event-success-msg" class="success-msg hidden">
-              <h3 class="display-heading text-accent">Thank you!</h3>
-              <p>Your event inquiry has been received. We will contact you to discuss details and pricing.</p>
-              <button class="btn btn-outline mt-4" onclick="resetEventForm()">Submit another request</button>
+        <div class="modal-split">
+          <!-- Left: Forms -->
+          <div class="modal-form-side">
+            <div class="booking-tabs">
+              <button
+                class="tab-btn active"
+                id="tab-room"
+                onclick="switchBookingTab('room')"
+                data-content="bookingTabRoom"
+              >
+                Book a Room
+              </button>
+              <button
+                class="tab-btn"
+                id="tab-event"
+                onclick="switchBookingTab('event')"
+                data-content="bookingTabEvent"
+              >
+                Book an Event
+              </button>
             </div>
 
-            <form id="event-booking-form" class="booking-form">
-               <div class="form-section">
-                <h3>1. Event Details</h3>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label>Event Type *</label>
-                    <select id="event-type" required>
-                      <option value="">Select...</option>
-                      <option value="Wedding">Wedding</option>
-                      <option value="Birthday">Birthday</option>
-                      <option value="Baptism">Baptism</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                  <div class="form-group">
-                    <label>Date *</label>
-                    <input type="date" id="event-date" required>
-                  </div>
-                </div>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label>Expected Guests *</label>
-                    <input type="number" id="event-pax" min="1" required>
-                  </div>
-                  <div class="form-group">
-                    <label>Time Block *</label>
-                    <select id="event-time" required>
-                      <option value="">Select...</option>
-                      <option value="Morning">Morning</option>
-                      <option value="Afternoon">Afternoon</option>
-                      <option value="Evening">Evening</option>
-                      <option value="Full Day">Full Day</option>
-                    </select>
-                  </div>
-                </div>
+            <!-- Room Form -->
+            <div id="room-form-container">
+              <div id="room-success-msg" class="success-msg hidden">
+                <h3
+                  class="display-heading text-accent"
+                  data-content="roomSuccessTitle"
+                >
+                  Thank you!
+                </h3>
+                <p data-content="roomSuccessText">
+                  Your request is pending confirmation. Our staff will contact
+                  you shortly.
+                </p>
+                <button
+                  class="btn btn-outline mt-4"
+                  onclick="resetRoomForm()"
+                  data-content="roomAnotherRequest"
+                >
+                  Submit another request
+                </button>
               </div>
-              <div class="form-section">
-                <h3>2. Your Details</h3>
-                <div class="form-group">
-                  <label>Full Name *</label>
-                  <input type="text" id="event-name" required>
-                </div>
-                <div class="form-group">
-                  <label>Contact Number *</label>
-                  <input type="tel" id="event-contact" required>
-                </div>
-                <div class="form-group">
-                  <label>Event Notes (Optional)</label>
-                  <textarea id="event-notes" rows="2"></textarea>
-                </div>
-              </div>
-              <button type="submit" class="btn btn-primary btn-block">Inquire Now</button>
-            </form>
-          </div>
-        </div>
 
-        <!-- Right: Sticky Order Summary -->
-        <div class="modal-summary-side">
-          <div class="sticky-summary">
-            <h3 class="summary-title">Summary</h3>
-            <div id="summary-room-view">
-              <div class="summary-img-placeholder"></div>
-              <div class="summary-details mt-4">
-                <div class="summary-row">
-                  <span>Room:</span>
-                  <strong id="sum-room-name">Not selected</strong>
+              <form id="room-booking-form" class="booking-form">
+                <div class="form-section">
+                  <h3 data-content="stayStepTitle">1. Your Stay</h3>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label data-content="checkinLabel">Check-in *</label>
+                      <input type="date" id="room-checkin" required />
+                    </div>
+                    <div class="form-group">
+                      <label data-content="checkoutLabel">Check-out *</label>
+                      <input type="date" id="room-checkout" required />
+                    </div>
+                  </div>
+                  <div
+                    class="form-error"
+                    id="room-date-error"
+                    data-content="dateError"
+                  >
+                    Check-out must be after check-in.
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label data-content="roomTypeLabel">Room Type *</label>
+                      <select id="room-type-select" required>
+                        <option value="" data-content="roomTypePlaceholder">
+                          Select a room...
+                        </option>
+                        <!-- JS Populated -->
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label data-content="guestsLabel">Guests *</label>
+                      <input
+                        type="number"
+                        id="room-pax"
+                        min="1"
+                        value="2"
+                        required
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div class="summary-row">
-                  <span>Dates:</span>
-                  <strong id="sum-dates">-</strong>
+
+                <div class="form-section">
+                  <h3 data-content="detailsStepTitle">2. Your Details</h3>
+                  <div class="form-group">
+                    <label data-content="fullNameLabel">Full Name *</label>
+                    <input type="text" id="room-name" required />
+                  </div>
+                  <div class="form-group">
+                    <label data-content="contactLabel">Contact Number *</label>
+                    <input type="tel" id="room-contact" required />
+                  </div>
+                  <div class="form-group">
+                    <label data-content="notesLabel">Notes (Optional)</label>
+                    <textarea id="room-notes" rows="2"></textarea>
+                  </div>
                 </div>
-                <div class="summary-row">
-                  <span>Nights:</span>
-                  <strong id="sum-nights">0</strong>
-                </div>
-                <hr>
-                <div class="summary-row total-row">
-                  <span>Estimated Total:</span>
-                  <strong class="text-accent" id="sum-total">₱0</strong>
-                </div>
-                <p class="summary-note">50% downpayment required upon confirmation.</p>
-              </div>
+                <button
+                  type="submit"
+                  class="btn btn-primary btn-block"
+                  data-content="roomSubmit"
+                >
+                  Submit Reservation Request
+                </button>
+              </form>
             </div>
-            
-            <div id="summary-event-view" class="hidden">
-              <div class="summary-img-placeholder event-placeholder">Event Space</div>
-              <div class="summary-details mt-4">
-                <p>Event pricing is customized based on requirements and package inclusions.</p>
-                <p>Submit your inquiry and our events team will provide a comprehensive quote.</p>
+
+            <!-- Event Form -->
+            <div id="event-form-container" class="hidden">
+              <div id="event-success-msg" class="success-msg hidden">
+                <h3
+                  class="display-heading text-accent"
+                  data-content="eventSuccessTitle"
+                >
+                  Thank you!
+                </h3>
+                <p data-content="eventSuccessText">
+                  Your event inquiry has been received. We will contact you to
+                  discuss details and pricing.
+                </p>
+                <button
+                  class="btn btn-outline mt-4"
+                  onclick="resetEventForm()"
+                  data-content="eventAnotherRequest"
+                >
+                  Submit another request
+                </button>
+              </div>
+
+              <form id="event-booking-form" class="booking-form">
+                <div class="form-section">
+                  <h3 data-content="eventStepTitle">1. Event Details</h3>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label data-content="eventTypeLabel">Event Type *</label>
+                      <select id="event-type" required>
+                        <option value="" data-content="optionSelect">
+                          Select...
+                        </option>
+                        <option
+                          value="Wedding"
+                          data-content="eventOptionWedding"
+                        >
+                          Wedding
+                        </option>
+                        <option
+                          value="Birthday"
+                          data-content="eventOptionBirthday"
+                        >
+                          Birthday
+                        </option>
+                        <option
+                          value="Baptism"
+                          data-content="eventOptionBaptism"
+                        >
+                          Baptism
+                        </option>
+                        <option value="Other" data-content="eventOptionOther">
+                          Other
+                        </option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label data-content="eventDateLabel">Date *</label>
+                      <input type="date" id="event-date" required />
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label data-content="eventGuestsLabel"
+                        >Expected Guests *</label
+                      >
+                      <input type="number" id="event-pax" min="1" required />
+                    </div>
+                    <div class="form-group">
+                      <label data-content="eventTimeLabel">Time Block *</label>
+                      <select id="event-time" required>
+                        <option value="" data-content="optionSelect">
+                          Select...
+                        </option>
+                        <option
+                          value="Morning"
+                          data-content="timeOptionMorning"
+                        >
+                          Morning
+                        </option>
+                        <option
+                          value="Afternoon"
+                          data-content="timeOptionAfternoon"
+                        >
+                          Afternoon
+                        </option>
+                        <option
+                          value="Evening"
+                          data-content="timeOptionEvening"
+                        >
+                          Evening
+                        </option>
+                        <option
+                          value="Full Day"
+                          data-content="timeOptionFullDay"
+                        >
+                          Full Day
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-section">
+                  <h3 data-content="eventDetailsTitle">2. Your Details</h3>
+                  <div class="form-group">
+                    <label data-content="fullNameLabel">Full Name *</label>
+                    <input type="text" id="event-name" required />
+                  </div>
+                  <div class="form-group">
+                    <label data-content="contactLabel">Contact Number *</label>
+                    <input type="tel" id="event-contact" required />
+                  </div>
+                  <div class="form-group">
+                    <label data-content="eventNotesLabel"
+                      >Event Notes (Optional)</label
+                    >
+                    <textarea id="event-notes" rows="2"></textarea>
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  class="btn btn-primary btn-block"
+                  data-content="eventSubmit"
+                >
+                  Inquire Now
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Right: Sticky Order Summary -->
+          <div class="modal-summary-side">
+            <div class="sticky-summary">
+              <h3 class="summary-title" data-content="summaryTitle">Summary</h3>
+              <div id="summary-room-view">
+                <div class="summary-img-placeholder"></div>
+                <div class="summary-details mt-4">
+                  <div class="summary-row">
+                    <span data-content="summaryRoomLabel">Room:</span>
+                    <strong
+                      id="sum-room-name"
+                      data-content="roomSummaryNotSelected"
+                      >Not selected</strong
+                    >
+                  </div>
+                  <div class="summary-row">
+                    <span data-content="summaryDatesLabel">Dates:</span>
+                    <strong id="sum-dates">-</strong>
+                  </div>
+                  <div class="summary-row">
+                    <span data-content="summaryNightsLabel">Nights:</span>
+                    <strong id="sum-nights">0</strong>
+                  </div>
+                  <hr />
+                  <div class="summary-row total-row">
+                    <span data-content="summaryTotalLabel"
+                      >Estimated Total:</span
+                    >
+                    <strong class="text-accent" id="sum-total">₱0</strong>
+                  </div>
+                  <p class="summary-note" data-content="summaryDownpayment">
+                    50% downpayment required upon confirmation.
+                  </p>
+                </div>
+              </div>
+
+              <div id="summary-event-view" class="hidden">
+                <div
+                  class="summary-img-placeholder event-placeholder"
+                  data-content="eventPlaceholder"
+                >
+                  Event Space
+                </div>
+                <div class="summary-details mt-4">
+                  <p data-content="eventPricingText">
+                    Event pricing is customized based on requirements and
+                    package inclusions.
+                  </p>
+                  <p data-content="eventQuoteText">
+                    Submit your inquiry and our events team will provide a
+                    comprehensive quote.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- 2. Full Gallery Modal -->
-  <div id="gallery-modal" class="modal-overlay hidden">
-    <div class="modal-full bg-white">
-      <button class="modal-close" onclick="closeModal('gallery-modal')">×</button>
-      <h2 class="display-heading text-center mb-4">Full Gallery</h2>
-      <div class="full-gallery-grid" id="full-gallery-grid">
-        <!-- JS Populated via main.js -->
+    <!-- 2. Full Gallery Modal -->
+    <div id="gallery-modal" class="modal-overlay hidden">
+      <div class="modal-full bg-white">
+        <button
+          class="modal-close"
+          aria-label="Close gallery"
+          data-content-aria-label="closeGalleryLabel"
+          onclick="closeModal('gallery-modal')"
+        >
+          ×
+        </button>
+        <h2
+          class="display-heading text-center mb-4"
+          data-content="galleryModalTitle"
+        >
+          Full Gallery
+        </h2>
+        <div class="full-gallery-grid" id="full-gallery-grid">
+          <!-- JS Populated via main.js -->
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- 3. Vanilla JS Full-Screen Lightbox -->
-  <div id="lightbox" class="lightbox hidden">
-    <button class="lightbox-close" aria-label="Close Lightbox" onclick="closeLightbox()">×</button>
-    <button class="lightbox-prev" aria-label="Previous Image" onclick="prevLightbox()">&#10094;</button>
-    <img id="lightbox-img" src="" alt="Gallery Full Image">
-    <button class="lightbox-next" aria-label="Next Image" onclick="nextLightbox()">&#10095;</button>
-  </div>
+    <!-- 3. Vanilla JS Full-Screen Lightbox -->
+    <div id="lightbox" class="lightbox hidden">
+      <button
+        class="lightbox-close"
+        aria-label="Close Lightbox"
+        data-content-aria-label="closeLightboxLabel"
+        onclick="closeLightbox()"
+      >
+        ×
+      </button>
+      <button
+        class="lightbox-prev"
+        aria-label="Previous Image"
+        data-content-aria-label="previousImageLabel"
+        onclick="prevLightbox()"
+      >
+        &#10094;
+      </button>
+      <img id="lightbox-img" src="" alt="Gallery Full Image" />
+      <button
+        class="lightbox-next"
+        aria-label="Next Image"
+        data-content-aria-label="nextImageLabel"
+        onclick="nextLightbox()"
+      >
+        &#10095;
+      </button>
+    </div>
 
-  <!-- Firebase v10 compat SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
-  
-  <!-- App Scripts -->
-  <script src="js/firebase-config.js"></script>
-  <script src="js/rooms-data.js"></script>
-  <script src="js/main.js"></script>
-  <script src="js/booking.js"></script>
-</body>
+    <!-- App Scripts -->
+    <script src="js/rooms-data.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/booking.js"></script>
+  </body>
 </html>
