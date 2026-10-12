@@ -72,17 +72,42 @@
           </form>
         </div>
 
-        <div class="detail-grid" id="report-results" style="display: none">
-          <div class="card">
-            <h2>Summary</h2>
+        <div class="card report-export-toolbar" id="report-export-toolbar">
+          <button
+            type="button"
+            class="btn btn-primary"
+            id="report-export"
+            hidden
+          >
+            Export selected report as PDF
+          </button>
+          <span>Use “Save as PDF” in your browser’s print dialog.</span>
+        </div>
+
+        <div id="report-print-area">
+          <header class="report-print-header">
+            <h1>Citi Cabana Report</h1>
             <p>
-              <strong>Total Confirmed Bookings:</strong>
-              <span id="report-total-bookings">0</span>
+              Selected booking creation dates:
+              <strong id="report-period"></strong>
             </p>
-            <p>
-              <strong>Total Downpayments (₱):</strong>
-              <span id="report-total-dp">0</span>
-            </p>
+          </header>
+          <div class="detail-grid" id="report-results" style="display: none">
+            <div class="card">
+              <h2>Summary</h2>
+              <p>
+                <strong>Total Confirmed Bookings:</strong>
+                <span id="report-total-bookings">0</span>
+              </p>
+              <p>
+                <strong>Room Bookings:</strong>
+                <span id="report-room-bookings">0</span>
+              </p>
+              <p>
+                <strong>Event Bookings:</strong>
+                <span id="report-event-bookings">0</span>
+              </p>
+            </div>
           </div>
         </div>
       </main>

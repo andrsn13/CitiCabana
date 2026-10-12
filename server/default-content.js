@@ -110,6 +110,7 @@ export const defaultRooms = [
     name: "Standard Room",
     capacity: "2 pax (double bed)",
     rate: 1000,
+    inclusions: "Aircon, TV, private bathroom",
     inventory: 5,
     image: "/images/room-standard.jpg",
   },

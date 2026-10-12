@@ -134,6 +134,7 @@ function initializeBookings() {
     const booking = {
       type,
       guestName: document.getElementById("walkin-name").value,
+      guestEmail: document.getElementById("walkin-email").value,
       contact: "Walk-in/Phone",
     };
     if (type === "room") {
@@ -148,10 +149,17 @@ function initializeBookings() {
     }
 
     try {
-      await apiRequest("/api/admin/bookings", {
+      const created = await apiRequest("/api/admin/bookings", {
         method: "POST",
         body: JSON.stringify(booking),
       });
+      if (created.emailDelivery) {
+        alert(
+          created.emailDelivery.sent
+            ? "Booking saved and confirmation email sent."
+            : `Booking saved, but confirmation email was not sent: ${created.emailDelivery.message}`,
+        );
+      }
       walkinForm.reset();
       toggleAddWalkin();
       await loadBookings();
@@ -180,7 +188,7 @@ function renderBookings(bookings) {
           : booking.eventDate;
       return `<tr>
       <td>${escapeHTML(formatDate(booking.createdAt))}</td>
-      <td><strong>${escapeHTML(booking.guestName)}</strong><br><small>${escapeHTML(booking.contact)}</small></td>
+      <td><strong>${escapeHTML(booking.guestName)}</strong><br><small>${escapeHTML(booking.guestEmail || booking.contact)}</small></td>
       <td>${escapeHTML(type)}</td>
       <td>${escapeHTML(dates)}</td>
       <td><span class="badge ${getBadgeClass(booking.status)}">${escapeHTML(booking.status)}</span></td>
@@ -227,26 +235,25 @@ async function initializeBookingDetail() {
 function renderBookingDetail(data) {
   document.getElementById("detail-guest").innerHTML = `
     <p><strong>Name:</strong> ${escapeHTML(data.guestName)}</p>
+    <p><strong>Email:</strong> ${escapeHTML(data.guestEmail || "Not provided")}</p>
     <p><strong>Contact:</strong> ${escapeHTML(data.contact)}</p>
     <p><strong>Notes:</strong> ${escapeHTML(data.notes || "None")}</p>
     <p><strong>Created:</strong> ${escapeHTML(formatDate(data.createdAt))}</p>`;
+  document.getElementById("booking-email-input").value = data.guestEmail || "";
 
   const details =
     data.type === "room"
       ? `<p><strong>Type:</strong> Room Booking</p><p><strong>Room:</strong> ${escapeHTML(data.roomType)}</p><p><strong>Check-in:</strong> ${escapeHTML(data.checkIn)}</p><p><strong>Check-out:</strong> ${escapeHTML(data.checkOut)}</p><p><strong>Pax:</strong> ${escapeHTML(data.pax || "N/A")}</p>`
       : `<p><strong>Type:</strong> Event Booking</p><p><strong>Event:</strong> ${escapeHTML(data.eventType)}</p><p><strong>Date:</strong> ${escapeHTML(data.eventDate)}</p><p><strong>Time:</strong> ${escapeHTML(data.timeBlock || "N/A")}</p><p><strong>Pax:</strong> ${escapeHTML(data.guestCount || "N/A")}</p>`;
-  const downpayment = data.downpaymentAmount
-    ? `<p><strong>Downpayment:</strong> ₱${escapeHTML(data.downpaymentAmount)} via ${escapeHTML(data.downpaymentMethod)}</p>`
-    : "";
   document.getElementById("detail-info").innerHTML =
-    `${details}<p><strong>Status:</strong> <span class="badge ${getBadgeClass(data.status)}">${escapeHTML(data.status)}</span></p>${downpayment}`;
+    `${details}<p><strong>Status:</strong> <span class="badge ${getBadgeClass(data.status)}">${escapeHTML(data.status)}</span></p>`;
 
   const actions = document.getElementById("action-buttons");
   actions.replaceChildren();
   if (data.status === "Pending") {
     addActionButton(
       actions,
-      "Confirm (Log DP)",
+      "Confirm Booking",
       "btn btn-success",
       showConfirmPanel,
     );
@@ -254,6 +261,12 @@ function renderBookingDetail(data) {
       updateStatus("Cancelled"),
     );
   } else if (data.status === "Confirmed") {
+    addActionButton(
+      actions,
+      "Resend Confirmation Email",
+      "btn btn-outline",
+      resendConfirmationEmail,
+    );
     addActionButton(actions, "Mark Checked-In", "btn btn-primary", () =>
       updateStatus("CheckedIn"),
     );
@@ -281,16 +294,57 @@ function showConfirmPanel() {
 }
 
 async function executeConfirm() {
-  const amountValue = document.getElementById("dp-amount").value;
   try {
-    await updateBooking({
-      status: "Confirmed",
-      downpaymentAmount: amountValue === "" ? null : Number(amountValue),
-      downpaymentMethod: document.getElementById("dp-method").value,
-    });
+    await updateBooking({ status: "Confirmed" });
     document.getElementById("confirm-panel").style.display = "none";
   } catch (error) {
     alert(error.message);
+  }
+}
+
+async function resendConfirmationEmail() {
+  try {
+    const result = await apiRequest(
+      `/api/admin/bookings/${encodeURIComponent(currentBookingId)}/resend-confirmation`,
+      { method: "POST" },
+    );
+    showConfirmationEmailResult(result.emailDelivery);
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+function showConfirmationEmailResult(result) {
+  if (!result) return;
+  const notice = document.getElementById("confirmation-email-feedback");
+  notice.hidden = false;
+  notice.className = result.sent
+    ? "confirmation-email-feedback success"
+    : "confirmation-email-feedback error";
+  notice.textContent = result.sent
+    ? "Booking confirmation email sent."
+    : `Booking is confirmed, but its email was not sent: ${result.message}`;
+}
+
+async function saveBookingEmail() {
+  const input = document.getElementById("booking-email-input");
+  const status = document.getElementById("booking-email-save-status");
+  if (!input.reportValidity()) return;
+  try {
+    const result = await apiRequest(
+      `/api/admin/bookings/${encodeURIComponent(currentBookingId)}/email`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ guestEmail: input.value }),
+      },
+    );
+    currentBookingData.guestEmail = result.guestEmail;
+    renderBookingDetail(currentBookingData);
+    status.textContent = "Email saved.";
+    status.className = "confirmation-email-feedback success";
+  } catch (error) {
+    status.textContent = error.message;
+    status.className = "confirmation-email-feedback error";
   }
 }
 
@@ -316,6 +370,8 @@ async function updateBooking(changes) {
     },
   );
   renderBookingDetail(currentBookingData);
+  showConfirmationEmailResult(currentBookingData.emailDelivery);
+  return currentBookingData;
 }
 
 async function loadRoomStatus() {
@@ -382,6 +438,13 @@ function initializeReports() {
   startInput.value = first.toISOString().split("T")[0];
   endInput.value = last.toISOString().split("T")[0];
 
+  [startInput, endInput].forEach((input) => {
+    input.addEventListener("change", () => {
+      document.getElementById("report-export").hidden = true;
+      document.getElementById("report-results").style.display = "none";
+    });
+  });
+
   document
     .getElementById("report-form")
     .addEventListener("submit", async (event) => {
@@ -391,15 +454,26 @@ function initializeReports() {
         end: endInput.value,
       });
       try {
+        if (startInput.value > endInput.value) {
+          throw new Error("Start date must be on or before end date.");
+        }
         const report = await apiRequest(`/api/admin/reports?${query}`);
+        document.getElementById("report-period").textContent =
+          `${startInput.value} through ${endInput.value}`;
+        document.getElementById("report-export").hidden = false;
         document.getElementById("report-results").style.display = "grid";
         document.getElementById("report-total-bookings").textContent =
           report.total_bookings;
-        document.getElementById("report-total-dp").textContent = Number(
-          report.total_downpayments,
-        ).toLocaleString();
+        document.getElementById("report-room-bookings").textContent =
+          report.room_bookings;
+        document.getElementById("report-event-bookings").textContent =
+          report.event_bookings;
       } catch (error) {
         alert(error.message);
       }
     });
+
+  document.getElementById("report-export").addEventListener("click", () => {
+    window.print();
+  });
 }

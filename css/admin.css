@@ -380,6 +380,27 @@ tr:hover {
 .status-NeedsCleaning { border-left-color: var(--admin-warning); }
 .status-Ready { border-left-color: var(--admin-success); }
 
+.status-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin: 0 0 20px;
+}
+.status-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+.status-legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.status-legend-occupied { background: var(--admin-danger); }
+.status-legend-cleaning { background: var(--admin-warning); }
+.status-legend-ready { background: var(--admin-success); }
+
 /* Details Layout */
 .detail-grid {
   display: grid;
@@ -400,4 +421,66 @@ tr:hover {
   border: 1px solid #ffeeba;
   margin-bottom: 20px;
   display: none;
+}
+
+.confirmation-email-feedback {
+  padding: 12px;
+  margin: 15px 0;
+  border-radius: 4px;
+}
+.confirmation-email-feedback.success {
+  color: #155724;
+  background: #d4edda;
+}
+.confirmation-email-feedback.error {
+  color: #721c24;
+  background: #f8d7da;
+}
+#booking-email-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  margin-bottom: 10px;
+}
+.report-export-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.report-print-header {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 18mm;
+  }
+  body * {
+    visibility: hidden !important;
+  }
+  #report-print-area,
+  #report-print-area * {
+    visibility: visible !important;
+  }
+  #report-print-area {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    color: #111;
+    background: #fff;
+  }
+  .report-print-header {
+    display: block;
+    margin-bottom: 24px;
+  }
+  #report-results {
+    display: grid !important;
+    grid-template-columns: 1fr;
+  }
+  #report-results .card {
+    border: 1px solid #bbb;
+    box-shadow: none;
+    break-inside: avoid;
+  }
 }

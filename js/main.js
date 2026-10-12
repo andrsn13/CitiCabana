@@ -24,10 +24,57 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderSplitScreenRooms();
   renderEventsSection();
   renderBentoGrid();
+  setupHeroCarousel();
   setupMobileMenu();
   setupOrderSummaryListeners();
   setupScrollspy();
 });
+
+function setupHeroCarousel() {
+  const hero = document.getElementById("home");
+  const controls = document.getElementById("hero-carousel-controls");
+  const indicators = document.getElementById("hero-carousel-indicators");
+  const previous = document.getElementById("hero-carousel-previous");
+  const next = document.getElementById("hero-carousel-next");
+  if (!hero || !controls || !indicators || !previous || !next) return;
+
+  const slides = [
+    ...new Set(
+      [siteContent.heroImage || "/images/hero.jpg", ...galleryImages].filter(
+        Boolean,
+      ),
+    ),
+  ];
+  if (slides.length < 2) return;
+
+  let activeSlide = 0;
+  const indicatorButtons = slides.map((_slide, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "hero-carousel-indicator";
+    button.setAttribute("aria-label", `Show hero image ${index + 1}`);
+    button.setAttribute("aria-pressed", "false");
+    button.addEventListener("click", () => showSlide(index));
+    indicators.appendChild(button);
+    return button;
+  });
+
+  function showSlide(index) {
+    activeSlide = (index + slides.length) % slides.length;
+    hero.style.backgroundImage = `linear-gradient(rgba(42, 43, 37, 0.4), rgba(42, 43, 37, 0.4)), url("${slides[activeSlide].replaceAll('"', "")}")`;
+    indicatorButtons.forEach((button, buttonIndex) => {
+      button.setAttribute(
+        "aria-pressed",
+        String(buttonIndex === activeSlide),
+      );
+    });
+  }
+
+  previous.addEventListener("click", () => showSlide(activeSlide - 1));
+  next.addEventListener("click", () => showSlide(activeSlide + 1));
+  controls.hidden = false;
+  showSlide(activeSlide);
+}
 
 // IntersectionObserver for Sticky Nav Scrollspy
 function setupScrollspy() {
@@ -83,7 +130,16 @@ function renderSplitScreenRooms() {
 
     row.innerHTML = `
       <div class="room-image-pane">
-        <img src="${escapeHTML(room.image)}" alt="${escapeHTML(room.name)}">
+        ${
+          isVilla
+            ? `<div class="villa-carousel">
+                <img class="villa-carousel-image" src="${escapeHTML(room.image)}" alt="${escapeHTML(room.name)}">
+                <button class="villa-carousel-arrow villa-carousel-previous" type="button" aria-label="Previous Villa image">&#8249;</button>
+                <div class="villa-carousel-indicators" role="group" aria-label="Choose Villa image"></div>
+                <button class="villa-carousel-arrow villa-carousel-next" type="button" aria-label="Next Villa image">&#8250;</button>
+              </div>`
+            : `<img src="${escapeHTML(room.image)}" alt="${escapeHTML(room.name)}">`
+        }
       </div>
       <div class="room-text-pane">
         <h3 class="display-heading">${escapeHTML(room.name)}</h3>
@@ -102,7 +158,59 @@ function renderSplitScreenRooms() {
       .querySelector(".book-room-button")
       .addEventListener("click", () => openBookingModal("room", room.id));
     container.appendChild(row);
+
+    if (isVilla) {
+      setupVillaCarousel(row, room);
+    }
   });
+}
+
+function setupVillaCarousel(row, room) {
+  const carousel = row.querySelector(".villa-carousel");
+  const image = carousel?.querySelector(".villa-carousel-image");
+  const indicators = carousel?.querySelector(".villa-carousel-indicators");
+  const previous = carousel?.querySelector(".villa-carousel-previous");
+  const next = carousel?.querySelector(".villa-carousel-next");
+  if (!carousel || !image || !indicators || !previous || !next) return;
+
+  const slides = [
+    { url: room.image, alt: room.name },
+    ...(Array.isArray(room.images) ? room.images : []),
+  ].filter((slide) => slide.url);
+  if (slides.length < 2) {
+    previous.hidden = true;
+    indicators.hidden = true;
+    next.hidden = true;
+    return;
+  }
+
+  let activeSlide = 0;
+  const indicatorButtons = slides.map((_slide, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "villa-carousel-indicator";
+    button.setAttribute("aria-label", `Show Villa image ${index + 1}`);
+    button.setAttribute("aria-pressed", "false");
+    button.addEventListener("click", () => showSlide(index));
+    indicators.appendChild(button);
+    return button;
+  });
+
+  function showSlide(index) {
+    activeSlide = (index + slides.length) % slides.length;
+    image.src = slides[activeSlide].url;
+    image.alt = slides[activeSlide].alt || `${room.name} - image ${activeSlide + 1}`;
+    indicatorButtons.forEach((button, buttonIndex) => {
+      button.setAttribute(
+        "aria-pressed",
+        String(buttonIndex === activeSlide),
+      );
+    });
+  }
+
+  previous.addEventListener("click", () => showSlide(activeSlide - 1));
+  next.addEventListener("click", () => showSlide(activeSlide + 1));
+  showSlide(activeSlide);
 }
 
 // Render Events Section

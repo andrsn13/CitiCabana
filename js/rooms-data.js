@@ -51,6 +51,10 @@ const fallbackRoomsData = [
     inclusions: "Aircon, TV, private bathroom, private pool",
     inventory: 1,
     image: "/images/room-villa.jpg",
+    images: [
+      { url: "/images/gallery-01.jpg", alt: "Villa image placeholder 1" },
+      { url: "/images/gallery-02.jpg", alt: "Villa image placeholder 2" },
+    ],
   },
 ];
 

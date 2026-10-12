@@ -168,6 +168,49 @@ a:hover { color: var(--brand-accent); }
 .hero-content .display-title { color: var(--white); }
 .hero-content .tagline { font-size: 1.5rem; font-weight: 400; font-family: var(--font-display); letter-spacing: 1px; }
 
+.hero-carousel-controls {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 2;
+}
+.hero-carousel-arrow,
+.hero-carousel-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(42, 43, 37, 0.45);
+  color: var(--white);
+  cursor: pointer;
+}
+.hero-carousel-arrow {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+.hero-carousel-indicators { display: flex; gap: 8px; }
+.hero-carousel-indicator {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border-radius: 50%;
+}
+.hero-carousel-indicator[aria-pressed="true"] {
+  background: var(--white);
+}
+.hero-carousel-arrow:focus-visible,
+.hero-carousel-indicator:focus-visible {
+  outline: 3px solid var(--white);
+  outline-offset: 3px;
+}
+
 /* Floating Booking Bar */
 .floating-booking-bar {
   position: absolute;
@@ -188,12 +231,16 @@ a:hover { color: var(--brand-accent); }
   gap: 20px;
 }
 
-.bar-field { flex: 1; text-align: left; }
+.bar-field { flex: 1; text-align: center; }
 .bar-field label { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-light); margin-bottom: 5px; font-weight: 600; }
-.bar-field input { 
+.bar-field input,
+.bar-field select {
   width: 100%; padding: 12px 0; border: none; border-bottom: 1px solid var(--brand-accent); 
   background: transparent; font-family: var(--font-ui); font-size: 1rem; color: var(--text-main); outline: none;
+  text-align: center;
 }
+.bar-field select { cursor: pointer; }
+.bar-field input::-webkit-datetime-edit { text-align: center; }
 .floating-booking-bar .btn { white-space: nowrap; }
 
 /* Alternating Split-Screen Rooms */
@@ -204,6 +251,51 @@ a:hover { color: var(--brand-accent); }
 
 .room-image-pane { width: 55%; height: 500px; position: relative; z-index: 1; background: var(--bg-secondary); }
 .room-image-pane img { width: 100%; height: 100%; object-fit: cover; }
+
+.villa-carousel { position: relative; width: 100%; height: 100%; }
+.villa-carousel-image { display: block; }
+.villa-carousel-arrow,
+.villa-carousel-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: rgba(42, 43, 37, 0.55);
+  color: var(--white);
+  cursor: pointer;
+}
+.villa-carousel-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-size: 2rem;
+  line-height: 1;
+}
+.villa-carousel-previous { left: 20px; }
+.villa-carousel-next { right: 20px; }
+.villa-carousel-indicators {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+}
+.villa-carousel-indicator {
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border-radius: 50%;
+}
+.villa-carousel-indicator[aria-pressed="true"] { background: var(--white); }
+.villa-carousel-arrow:focus-visible,
+.villa-carousel-indicator:focus-visible {
+  outline: 3px solid var(--white);
+  outline-offset: 3px;
+}
 
 .room-text-pane { width: 50%; padding: 60px; background: var(--white); box-shadow: 0 4px 30px rgba(0,0,0,0.08); position: relative; z-index: 2; margin-left: -5%; display: flex; flex-direction: column; justify-content: center; }
 .room-row:nth-child(even) .room-text-pane { margin-left: 0; margin-right: -5%; }

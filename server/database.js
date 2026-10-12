@@ -101,6 +101,35 @@ export async function initializeDatabase(pool) {
     }
   }
 
+  const villaPlaceholderSeed = await pool.query(
+    `INSERT INTO app_settings (setting_key, setting_value)
+     VALUES ('villa-carousel-placeholders-v1', 'applied')
+     ON CONFLICT (setting_key) DO NOTHING
+     RETURNING setting_key`,
+  );
+  if (villaPlaceholderSeed.rowCount) {
+    const villa = await pool.query(
+      "SELECT id FROM rooms WHERE id = 'villa' AND active = true",
+    );
+    if (villa.rowCount) {
+      for (const [index, image] of [
+        "/images/gallery-01.jpg",
+        "/images/gallery-02.jpg",
+      ].entries()) {
+        await pool.query(
+          `INSERT INTO room_images (room_id, url, alt_text, sort_order)
+           VALUES ($1, $2, $3, $4)`,
+          [
+            villa.rows[0].id,
+            image,
+            `Villa image placeholder ${index + 1}`,
+            index + 1,
+          ],
+        );
+      }
+    }
+  }
+
   await syncPhysicalRooms(pool);
 }
 
@@ -126,13 +155,21 @@ export async function syncPhysicalRooms(pool, roomId = null) {
   const values = roomId ? [roomId] : [];
   const filter = roomId ? "WHERE id = $1" : "";
   const rooms = await pool.query(
-    `SELECT id, name, inventory FROM rooms ${filter} ORDER BY name`,
+    `SELECT id, name, inventory, active FROM rooms ${filter} ORDER BY name`,
     values,
   );
 
   for (const room of rooms.rows) {
+    if (!room.active) {
+      await pool.query(
+        "UPDATE physical_rooms SET active = false WHERE room_id = $1",
+        [room.id],
+      );
+      continue;
+    }
+
     await pool.query(
-      "UPDATE physical_rooms SET active = (unit_number <= $2) WHERE room_id = $1",
+      "UPDATE physical_rooms SET active = false WHERE room_id = $1 AND unit_number > $2",
       [room.id, room.inventory],
     );
 

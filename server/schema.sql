@@ -3,6 +3,11 @@ CREATE TABLE IF NOT EXISTS site_content (
   content_value jsonb NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS app_settings (
+  setting_key text PRIMARY KEY,
+  setting_value text NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS rooms (
   id text PRIMARY KEY,
   name text NOT NULL,
@@ -11,6 +16,16 @@ CREATE TABLE IF NOT EXISTS rooms (
   inclusions text NOT NULL DEFAULT '',
   inventory integer NOT NULL DEFAULT 1 CHECK (inventory > 0),
   image text NOT NULL,
+  sort_order integer NOT NULL DEFAULT 0,
+  active boolean NOT NULL DEFAULT true
+);
+ALTER TABLE rooms ADD COLUMN IF NOT EXISTS active boolean NOT NULL DEFAULT true;
+
+CREATE TABLE IF NOT EXISTS room_images (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  room_id text NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+  url text NOT NULL,
+  alt_text text NOT NULL DEFAULT '',
   sort_order integer NOT NULL DEFAULT 0
 );
 
@@ -27,6 +42,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   status text NOT NULL DEFAULT 'Pending'
     CHECK (status IN ('Pending', 'Confirmed', 'Cancelled', 'Completed', 'CheckedIn')),
   guest_name text NOT NULL,
+  guest_email text NOT NULL DEFAULT '',
   contact text NOT NULL,
   notes text NOT NULL DEFAULT '',
   room_id text REFERENCES rooms(id) ON DELETE SET NULL,
@@ -46,6 +62,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     OR (type = 'event' AND event_date IS NOT NULL)
   )
 );
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS guest_email text NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS physical_rooms (
   id text PRIMARY KEY,

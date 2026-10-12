@@ -90,6 +90,10 @@ function escapeCmsText(value) {
   );
 }
 
+function isVillaRoom(room) {
+  return room.id === "villa" || room.name.toLowerCase().includes("villa");
+}
+
 function renderContentEditor(content) {
   const container = document.getElementById("cms-content-fields");
   container.replaceChildren();
@@ -193,25 +197,35 @@ function renderRooms(rooms) {
   }
   rooms.forEach((room) => {
     const card = document.createElement("article");
-    card.className = "cms-card";
+    card.className = `cms-card ${room.active ? "" : "is-archived"}`;
     const image = document.createElement("img");
     image.src = room.image;
     image.alt = room.name;
     const title = document.createElement("h3");
     title.textContent = room.name;
     const details = document.createElement("p");
-    details.textContent = `Rate: ₱${Number(room.rate).toLocaleString()} · Capacity: ${room.capacity} · Inventory: ${room.inventory}`;
+    details.textContent = `Rate: ₱${Number(room.rate).toLocaleString()} · Capacity: ${room.capacity} · Inventory: ${room.inventory} · ${room.active ? "Available" : "Archived"}`;
     const actions = document.createElement("div");
     actions.className = "cms-actions";
     const edit = document.createElement("button");
     edit.className = "btn-save";
     edit.textContent = "Edit";
     edit.addEventListener("click", () => openRoomModal(room));
-    const remove = document.createElement("button");
-    remove.className = "btn-delete";
-    remove.textContent = "Delete";
-    remove.addEventListener("click", () => deleteRoom(room.id));
-    actions.append(edit, remove);
+    actions.appendChild(edit);
+    if (room.active && isVillaRoom(room)) {
+      const images = document.createElement("button");
+      images.className = "btn-save";
+      images.textContent = "Manage Villa carousel images";
+      images.addEventListener("click", () => openRoomImagesModal(room));
+      actions.appendChild(images);
+    }
+    const availability = document.createElement("button");
+    availability.className = room.active ? "btn-delete" : "btn-save";
+    availability.textContent = room.active ? "Archive" : "Restore";
+    availability.addEventListener("click", () =>
+      setRoomAvailability(room, !room.active),
+    );
+    actions.appendChild(availability);
     card.append(image, title, details, actions);
     grid.appendChild(card);
   });
@@ -228,6 +242,7 @@ function openRoomModal(room = null) {
     room?.inclusions || "";
   document.getElementById("room-inventory-input").value = room?.inventory ?? 1;
   document.getElementById("room-image-url").value = room?.image || "";
+  document.getElementById("room-active-input").checked = room?.active ?? true;
   document.getElementById("room-modal-title").textContent = room
     ? "Edit Room"
     : "Add Room";
@@ -246,7 +261,7 @@ async function saveRoom(event) {
     let image = document.getElementById("room-image-url").value;
     const file = document.getElementById("room-image-upload").files[0];
     if (file) image = (await uploadImage(file)).url;
-    await cmsRequest("/api/admin/rooms", {
+    const room = await cmsRequest("/api/admin/rooms", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -257,10 +272,14 @@ async function saveRoom(event) {
         inclusions: document.getElementById("room-inclusions-input").value,
         inventory: document.getElementById("room-inventory-input").value,
         image,
+        active: document.getElementById("room-active-input").checked,
       }),
     });
     closeRoomModal();
     await loadRooms();
+    if (!document.getElementById("room-id-input").value && isVillaRoom(room)) {
+      openRoomImagesModal(room);
+    }
   } catch (error) {
     alert(error.message);
   } finally {
@@ -268,22 +287,122 @@ async function saveRoom(event) {
   }
 }
 
-async function deleteRoom(id) {
+async function setRoomAvailability(room, active) {
   if (
     !confirm(
-      "Delete this room? Existing bookings will keep their saved room name.",
+      active
+        ? `Restore ${room.name} to the public room listings?`
+        : `Archive ${room.name} and remove it from public room listings?`,
     )
   )
     return;
   try {
-    await cmsRequest(`/api/admin/rooms/${encodeURIComponent(id)}`, {
-      method: "DELETE",
+    await cmsRequest("/api/admin/rooms", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...room, active }),
     });
     await loadRooms();
   } catch (error) {
     alert(error.message);
   }
 }
+
+let currentRoomImagesRoom = null;
+
+async function openRoomImagesModal(room) {
+  currentRoomImagesRoom = room;
+  document.getElementById("room-images-room-name").textContent = room.name;
+  document.getElementById("room-gallery-upload").value = "";
+  document.getElementById("cms-room-images-modal").style.display = "flex";
+  await loadRoomImages();
+}
+
+function closeRoomImagesModal() {
+  document.getElementById("cms-room-images-modal").style.display = "none";
+  currentRoomImagesRoom = null;
+}
+
+async function loadRoomImages() {
+  if (!currentRoomImagesRoom) return;
+  const list = document.getElementById("cms-room-images-list");
+  list.textContent = "Loading room images...";
+  try {
+    const images = await cmsRequest(
+      `/api/admin/rooms/${encodeURIComponent(currentRoomImagesRoom.id)}/images`,
+    );
+    list.replaceChildren();
+    if (!images.length) {
+      list.textContent =
+        "No additional carousel images yet. The main room image remains the first slide.";
+      return;
+    }
+    images.forEach((item) => {
+      const card = document.createElement("article");
+      card.className = "cms-room-image";
+      const image = document.createElement("img");
+      image.src = item.url;
+      image.alt = item.alt || currentRoomImagesRoom.name;
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "btn-delete";
+      remove.textContent = "Remove image";
+      remove.addEventListener("click", async () => {
+        if (!confirm("Remove this image from the room carousel?")) return;
+        try {
+          await cmsRequest(
+            `/api/admin/rooms/${encodeURIComponent(currentRoomImagesRoom.id)}/images/${item.id}`,
+            { method: "DELETE" },
+          );
+          await loadRoomImages();
+        } catch (error) {
+          alert(error.message);
+        }
+      });
+      card.append(image, remove);
+      list.appendChild(card);
+    });
+  } catch (error) {
+    list.textContent = error.message;
+  }
+}
+
+document.getElementById("room-images-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!currentRoomImagesRoom) return;
+  const input = document.getElementById("room-gallery-upload");
+  const files = [...input.files];
+  if (!files.length) {
+    alert("Choose one or more images first.");
+    return;
+  }
+  const button = document.getElementById("save-room-images-btn");
+  button.disabled = true;
+  try {
+    for (const file of files) {
+      const { url } = await uploadImage(file);
+      await cmsRequest(
+        `/api/admin/rooms/${encodeURIComponent(currentRoomImagesRoom.id)}/images`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url,
+            alt: `${currentRoomImagesRoom.name} photo`,
+          }),
+        },
+      );
+    }
+    input.value = "";
+    await loadRoomImages();
+    await loadRooms();
+  } catch (error) {
+    await loadRoomImages();
+    alert(error.message);
+  } finally {
+    button.disabled = false;
+  }
+});
 
 async function loadGallery() {
   renderGallery(await cmsRequest("/api/admin/gallery"));
