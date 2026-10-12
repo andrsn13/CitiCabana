@@ -74,7 +74,7 @@ export async function initializeDatabase(pool) {
     for (const [index, room] of defaultRooms.entries()) {
       await pool.query(
         `INSERT INTO rooms (id, name, capacity, rate, inclusions, inventory, image, sort_order)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+         VALUES ($1, $2, $3, $4, COALESCE($5, ''), $6, $7, $8)`,
         [
           room.id,
           room.name,
