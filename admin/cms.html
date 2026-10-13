@@ -211,6 +211,9 @@
           <button class="cms-tab" onclick="switchCmsTab('rooms', this)">
             Rooms
           </button>
+          <button class="cms-tab" onclick="switchCmsTab('hero', this)">
+            Hero Carousel
+          </button>
           <button class="cms-tab" onclick="switchCmsTab('gallery', this)">
             Gallery
           </button>
@@ -235,6 +238,47 @@
             </div>
           </div>
           <div id="cms-content-fields"><p>Loading website content...</p></div>
+        </div>
+
+        <div id="cms-hero" class="cms-section">
+          <div class="page-header">
+            <div>
+              <h2>Hero Carousel Photos</h2>
+              <p>These photos appear only in the home-page hero carousel.</p>
+            </div>
+          </div>
+          <form id="cms-hero-form" class="cms-card">
+            <div class="form-group image-upload-wrapper">
+              <label for="hero-image-upload">Resort photo</label>
+              <input
+                type="file"
+                id="hero-image-upload"
+                accept="image/*"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="hero-image-alt">Alternative text</label>
+              <input
+                type="text"
+                id="hero-image-alt"
+                maxlength="300"
+                placeholder="Describe the resort photo"
+              />
+            </div>
+            <button type="submit" id="save-hero-image-btn" class="btn-save">
+              Upload and Add Photo
+            </button>
+            <span
+              id="hero-image-upload-status"
+              class="cms-save-status"
+              role="status"
+              aria-live="polite"
+            ></span>
+          </form>
+          <div class="cms-grid" id="cms-hero-images-grid">
+            <p>Loading hero photos...</p>
+          </div>
         </div>
 
         <!-- ROOMS CMS -->
@@ -417,7 +461,8 @@
               aria-describedby="room-images-guidance"
             />
             <small id="room-images-guidance">
-              The main room image remains the first carousel slide. Uploaded images follow it.
+              The main room image remains the first carousel slide. Uploaded
+              images follow it.
             </small>
           </div>
           <button type="submit" class="btn-save" id="save-room-images-btn">
@@ -429,7 +474,11 @@
           class="cms-room-images-list"
           aria-live="polite"
         ></div>
-        <button type="button" class="btn-delete" onclick="closeRoomImagesModal()">
+        <button
+          type="button"
+          class="btn-delete"
+          onclick="closeRoomImagesModal()"
+        >
           Close
         </button>
       </div>

@@ -36,6 +36,13 @@ CREATE TABLE IF NOT EXISTS gallery_images (
   sort_order integer NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS hero_images (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  url text NOT NULL,
+  alt_text text NOT NULL DEFAULT '',
+  sort_order integer NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS bookings (
   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   type text NOT NULL CHECK (type IN ('room', 'event')),

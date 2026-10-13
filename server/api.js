@@ -128,12 +128,13 @@ export function registerApi(app, pool) {
   router.get(
     "/public-content",
     asyncRoute(async (_request, response) => {
-      const [contentResult, roomResult, galleryResult] = await Promise.all([
-        pool.query(
-          "SELECT content_value FROM site_content WHERE content_key = 'public'",
-        ),
-        pool.query(
-          `SELECT room.id, room.name, room.capacity, room.rate, room.inclusions,
+      const [contentResult, roomResult, galleryResult, heroImageResult] =
+        await Promise.all([
+          pool.query(
+            "SELECT content_value FROM site_content WHERE content_key = 'public'",
+          ),
+          pool.query(
+            `SELECT room.id, room.name, room.capacity, room.rate, room.inclusions,
              room.inventory, room.image,
              COALESCE(json_agg(json_build_object(
                'id', image.id, 'url', image.url, 'alt', image.alt_text,
@@ -144,16 +145,20 @@ export function registerApi(app, pool) {
            LEFT JOIN room_images AS image ON image.room_id = room.id
            WHERE room.active = true
            GROUP BY room.id ORDER BY room.sort_order, room.name`,
-        ),
-        pool.query(
-          "SELECT id, url, alt_text AS alt, sort_order FROM gallery_images ORDER BY sort_order, id",
-        ),
-      ]);
+          ),
+          pool.query(
+            "SELECT id, url, alt_text AS alt, sort_order FROM gallery_images ORDER BY sort_order, id",
+          ),
+          pool.query(
+            "SELECT id, url, alt_text AS alt, sort_order FROM hero_images ORDER BY sort_order, id",
+          ),
+        ]);
 
       response.json({
         content: { ...defaultContent, ...contentResult.rows[0]?.content_value },
         rooms: roomResult.rows,
         gallery: galleryResult.rows,
+        heroImages: heroImageResult.rows,
       });
     }),
   );
@@ -372,7 +377,11 @@ export function registerApi(app, pool) {
           [id],
         );
         const current = currentResult.rows[0];
-        if (current && current.active && (!active || inventory < current.inventory)) {
+        if (
+          current &&
+          current.active &&
+          (!active || inventory < current.inventory)
+        ) {
           const blockingRooms = await client.query(
             `SELECT room_label, status FROM physical_rooms
              WHERE room_id = $1 AND active = true
@@ -399,7 +408,8 @@ export function registerApi(app, pool) {
             if (upcoming.rows[0].exists) {
               await client.query("ROLLBACK");
               return response.status(409).json({
-                error: "This room type has upcoming pending or confirmed bookings and cannot be archived yet.",
+                error:
+                  "This room type has upcoming pending or confirmed bookings and cannot be archived yet.",
               });
             }
           } else if (inventory < current.inventory) {
@@ -490,7 +500,8 @@ export function registerApi(app, pool) {
       );
       if (upcoming.rows[0].exists) {
         return response.status(409).json({
-          error: "This room type has upcoming pending or confirmed bookings and cannot be archived yet.",
+          error:
+            "This room type has upcoming pending or confirmed bookings and cannot be archived yet.",
         });
       }
       await pool.query("UPDATE rooms SET active = false WHERE id = $1", [
@@ -519,10 +530,16 @@ export function registerApi(app, pool) {
     requireAdmin,
     asyncRoute(async (request, response) => {
       const { url, alt = "" } = request.body;
-      if (!validText(url, 1000) || typeof alt !== "string" || alt.length > 300) {
+      if (
+        !validText(url, 1000) ||
+        typeof alt !== "string" ||
+        alt.length > 300
+      ) {
         return response
           .status(400)
-          .json({ error: "A valid image URL and alternative text are required" });
+          .json({
+            error: "A valid image URL and alternative text are required",
+          });
       }
       const result = await pool.query(
         `INSERT INTO room_images (room_id, url, alt_text, sort_order)
@@ -533,7 +550,9 @@ export function registerApi(app, pool) {
         [request.params.id, url, alt.trim()],
       );
       if (!result.rowCount)
-        return response.status(404).json({ error: "Active room type not found" });
+        return response
+          .status(404)
+          .json({ error: "Active room type not found" });
       response.status(201).json(result.rows[0]);
     }),
   );
@@ -621,6 +640,87 @@ export function registerApi(app, pool) {
     }),
   );
 
+  router.get(
+    "/admin/hero-images",
+    requireAdmin,
+    asyncRoute(async (_request, response) => {
+      const result = await pool.query(
+        "SELECT id, url, alt_text AS alt, sort_order FROM hero_images ORDER BY sort_order, id",
+      );
+      response.json(result.rows);
+    }),
+  );
+
+  router.post(
+    "/admin/hero-images",
+    requireAdmin,
+    asyncRoute(async (request, response) => {
+      const { url, alt = "", sort_order: sortOrder } = request.body;
+      if (
+        !validText(url, 1000) ||
+        typeof alt !== "string" ||
+        alt.length > 300 ||
+        (sortOrder != null && !Number.isInteger(Number(sortOrder)))
+      ) {
+        return response.status(400).json({
+          error:
+            "A valid image URL, alternative text, and sort order are required",
+        });
+      }
+      const result = await pool.query(
+        `INSERT INTO hero_images (url, alt_text, sort_order)
+         VALUES ($1, $2, COALESCE($3, (SELECT COALESCE(max(sort_order), 0) + 1 FROM hero_images)))
+         RETURNING id, url, alt_text AS alt, sort_order`,
+        [url, alt.trim(), sortOrder == null ? null : Number(sortOrder)],
+      );
+      response.status(201).json(result.rows[0]);
+    }),
+  );
+
+  router.patch(
+    "/admin/hero-images/:id",
+    requireAdmin,
+    asyncRoute(async (request, response) => {
+      const sortOrder =
+        request.body.sort_order == null
+          ? null
+          : Number(request.body.sort_order);
+      const alt =
+        request.body.alt == null
+          ? null
+          : String(request.body.alt).slice(0, 300);
+      if (sortOrder !== null && !Number.isInteger(sortOrder)) {
+        return response
+          .status(400)
+          .json({ error: "Sort order must be a whole number" });
+      }
+      const result = await pool.query(
+        `UPDATE hero_images
+         SET sort_order = COALESCE($1, sort_order), alt_text = COALESCE($2, alt_text)
+         WHERE id = $3
+         RETURNING id, url, alt_text AS alt, sort_order`,
+        [sortOrder, alt, request.params.id],
+      );
+      if (!result.rowCount)
+        return response.status(404).json({ error: "Hero image not found" });
+      response.json(result.rows[0]);
+    }),
+  );
+
+  router.delete(
+    "/admin/hero-images/:id",
+    requireAdmin,
+    asyncRoute(async (request, response) => {
+      const result = await pool.query(
+        "DELETE FROM hero_images WHERE id = $1 RETURNING id",
+        [request.params.id],
+      );
+      if (!result.rowCount)
+        return response.status(404).json({ error: "Hero image not found" });
+      response.status(204).end();
+    }),
+  );
+
   router.post(
     "/bookings",
     asyncRoute(async (request, response) => {
@@ -632,7 +732,9 @@ export function registerApi(app, pool) {
       ) {
         return response
           .status(400)
-          .json({ error: "Name, contact number, and a valid email are required" });
+          .json({
+            error: "Name, contact number, and a valid email are required",
+          });
       }
 
       if (booking.type === "room") {
@@ -802,9 +904,7 @@ export function registerApi(app, pool) {
           client.release();
         }
         const emailDelivery = await deliverConfirmation(result.rows[0]);
-        return response
-          .status(201)
-          .json({ ...result.rows[0], emailDelivery });
+        return response.status(201).json({ ...result.rows[0], emailDelivery });
       }
       if (
         booking.type === "event" &&
@@ -824,9 +924,7 @@ export function registerApi(app, pool) {
           ],
         );
         const emailDelivery = await deliverConfirmation(result.rows[0]);
-        return response
-          .status(201)
-          .json({ ...result.rows[0], emailDelivery });
+        return response.status(201).json({ ...result.rows[0], emailDelivery });
       }
       response
         .status(400)
@@ -885,7 +983,9 @@ export function registerApi(app, pool) {
             await client.query("ROLLBACK");
             return response
               .status(409)
-              .json({ error: "This room type is no longer available for booking." });
+              .json({
+                error: "This room type is no longer available for booking.",
+              });
           }
           const inventory = roomResult.rows[0]?.inventory || 0;
           const overlap = await client.query(
@@ -992,14 +1092,12 @@ export function registerApi(app, pool) {
         return response
           .status(400)
           .json({ error: "Start and end dates are required" });
-      if (
-        !validDate(start) ||
-        !validDate(end) ||
-        start > end
-      ) {
+      if (!validDate(start) || !validDate(end) || start > end) {
         return response
           .status(400)
-          .json({ error: "Enter a valid date range with start on or before end" });
+          .json({
+            error: "Enter a valid date range with start on or before end",
+          });
       }
       const result = await pool.query(
         `SELECT count(*)::int AS total_bookings,

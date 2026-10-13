@@ -162,3 +162,8 @@ export const defaultGallery = [
   "/images/room-standard.png",
   "/images/events.jpg",
 ];
+
+export const defaultHeroImages = [
+  { url: "/images/Pool.jpg", alt: "Citi Cabana swimming pool" },
+  { url: "/images/Garden.jpg", alt: "Citi Cabana garden" },
+];

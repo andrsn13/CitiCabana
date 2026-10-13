@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import {
   defaultContent,
   defaultGallery,
+  defaultHeroImages,
   defaultRooms,
 } from "./default-content.js";
 
@@ -98,6 +99,18 @@ export async function initializeDatabase(pool) {
       await pool.query(
         "INSERT INTO gallery_images (url, alt_text, sort_order) VALUES ($1, $2, $3)",
         [url, `Citi Cabana gallery photo ${index + 1}`, index + 1],
+      );
+    }
+  }
+
+  const heroImageCount = await pool.query(
+    "SELECT count(*)::int AS count FROM hero_images",
+  );
+  if (heroImageCount.rows[0].count === 0) {
+    for (const [index, image] of defaultHeroImages.entries()) {
+      await pool.query(
+        "INSERT INTO hero_images (url, alt_text, sort_order) VALUES ($1, $2, $3)",
+        [image.url, image.alt, index + 1],
       );
     }
   }

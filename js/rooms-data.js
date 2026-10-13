@@ -4,12 +4,11 @@
 let roomsData = [];
 let galleryImages = [];
 let galleryImageAltTexts = [];
+let heroImages = [];
 let siteContent = {};
-const heroCarouselImages = [
-  "/images/hero-02.png",
-  "/images/hero-03.png",
-  "/images/hero-04.png",
-  "/images/hero-05.png",
+const fallbackHeroImages = [
+  { url: "/images/Pool.jpg", alt: "Citi Cabana swimming pool" },
+  { url: "/images/Garden.jpg", alt: "Citi Cabana garden" },
 ];
 
 const fallbackRoomsData = [
@@ -126,6 +125,7 @@ async function loadCMSData() {
     roomsData = data.rooms;
     galleryImages = data.gallery.map((image) => image.url);
     galleryImageAltTexts = data.gallery.map((image) => image.alt);
+    heroImages = data.heroImages;
     eventData = {
       title: siteContent.eventsTitle,
       description: siteContent.eventsDescription,
@@ -136,6 +136,7 @@ async function loadCMSData() {
     console.error("Error loading local CMS data:", error);
     roomsData = fallbackRoomsData;
     galleryImages = fallbackGalleryImages.map((img) => img.url);
+    heroImages = fallbackHeroImages;
     galleryImageAltTexts = galleryImages.map(
       (_url, index) => `Citi Cabana gallery photo ${index + 1}`,
     );

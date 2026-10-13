@@ -38,12 +38,7 @@ async function setupHeroCarousel() {
   const next = document.getElementById("hero-carousel-next");
   if (!hero || !controls || !indicators || !previous || !next) return;
 
-  const slideUrls = [
-    ...new Set([
-      siteContent.heroImage || "/images/hero.jpg",
-      ...heroCarouselImages,
-    ]),
-  ];
+  const slideUrls = [...new Set(heroImages.map((image) => image.url))];
   const slides = (
     await Promise.all(
       slideUrls.map(
@@ -57,19 +52,10 @@ async function setupHeroCarousel() {
       ),
     )
   ).filter(Boolean);
-  if (slides.length < 2) return;
+  if (slides.length === 0) return;
 
   let activeSlide = 0;
-  const indicatorButtons = slides.map((_slide, index) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "hero-carousel-indicator";
-    button.setAttribute("aria-label", `Show hero image ${index + 1}`);
-    button.setAttribute("aria-pressed", "false");
-    button.addEventListener("click", () => showSlide(index));
-    indicators.appendChild(button);
-    return button;
-  });
+  let indicatorButtons = [];
 
   function showSlide(index) {
     activeSlide = (index + slides.length) % slides.length;
@@ -79,10 +65,22 @@ async function setupHeroCarousel() {
     });
   }
 
+  showSlide(activeSlide);
+  if (slides.length < 2) return;
+
+  indicatorButtons = slides.map((_slide, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "hero-carousel-indicator";
+    button.setAttribute("aria-label", `Show hero image ${index + 1}`);
+    button.setAttribute("aria-pressed", "false");
+    button.addEventListener("click", () => showSlide(index));
+    indicators.appendChild(button);
+    return button;
+  });
   previous.addEventListener("click", () => showSlide(activeSlide - 1));
   next.addEventListener("click", () => showSlide(activeSlide + 1));
   controls.hidden = false;
-  showSlide(activeSlide);
 }
 
 // IntersectionObserver for Sticky Nav Scrollspy

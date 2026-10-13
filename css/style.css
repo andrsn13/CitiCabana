@@ -190,7 +190,9 @@ a:hover {
   align-items: center;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 4px 24px;
+  min-height: 76px;
+  box-sizing: border-box;
+  padding: 12px 24px;
 }
 
 .nav-brand {
@@ -200,8 +202,10 @@ a:hover {
 
 .nav-brand img {
   display: block;
-  width: 120px;
-  height: 120px;
+  width: 150px;
+  max-width: 42vw;
+  height: auto;
+  max-height: 54px;
   object-fit: contain;
 }
 
@@ -271,6 +275,9 @@ a:hover {
   align-items: center;
   gap: 16px;
   z-index: 2;
+}
+.hero-carousel-controls[hidden] {
+  display: none;
 }
 .hero-carousel-arrow,
 .hero-carousel-indicator {

@@ -57,15 +57,20 @@ async function initializeLocalCms() {
   document
     .getElementById("cms-gallery-form")
     .addEventListener("submit", saveGalleryImage);
+  document
+    .getElementById("cms-hero-form")
+    .addEventListener("submit", saveHeroImage);
   try {
-    const [publicData, rooms, gallery] = await Promise.all([
+    const [publicData, rooms, gallery, heroImages] = await Promise.all([
       cmsRequest("/api/public-content"),
       cmsRequest("/api/admin/rooms"),
       cmsRequest("/api/admin/gallery"),
+      cmsRequest("/api/admin/hero-images"),
     ]);
     renderContentEditor(publicData.content);
     renderRooms(rooms);
     renderGallery(gallery);
+    renderHeroImages(heroImages);
   } catch (error) {
     document
       .querySelector(".admin-content")
@@ -97,7 +102,9 @@ function isVillaRoom(room) {
 function renderContentEditor(content) {
   const container = document.getElementById("cms-content-fields");
   container.replaceChildren();
-  const pending = new Set(Object.keys(content));
+  const pending = new Set(
+    Object.keys(content).filter((key) => key !== "heroImage"),
+  );
 
   cmsContentGroups.forEach((group, index) => {
     const keys = [...pending].filter(group.test);
@@ -142,14 +149,14 @@ function createContentField(key, value) {
     upload.setAttribute("aria-label", `Upload ${cmsLabel(key)}`);
     upload.addEventListener("change", async () => {
       if (!upload.files[0]) return;
-      label.classList.add("is-uploading");
+      field.classList.add("is-uploading");
       try {
         const result = await uploadImage(upload.files[0]);
         input.value = result.url;
       } catch (error) {
         alert(error.message);
       } finally {
-        label.classList.remove("is-uploading");
+        field.classList.remove("is-uploading");
         upload.value = "";
       }
     });
@@ -367,45 +374,153 @@ async function loadRoomImages() {
   }
 }
 
-document.getElementById("room-images-form")?.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  if (!currentRoomImagesRoom) return;
-  const input = document.getElementById("room-gallery-upload");
-  const files = [...input.files];
-  if (!files.length) {
-    alert("Choose one or more images first.");
-    return;
-  }
-  const button = document.getElementById("save-room-images-btn");
-  button.disabled = true;
-  try {
-    for (const file of files) {
-      const { url } = await uploadImage(file);
-      await cmsRequest(
-        `/api/admin/rooms/${encodeURIComponent(currentRoomImagesRoom.id)}/images`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            url,
-            alt: `${currentRoomImagesRoom.name} photo`,
-          }),
-        },
-      );
+document
+  .getElementById("room-images-form")
+  ?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!currentRoomImagesRoom) return;
+    const input = document.getElementById("room-gallery-upload");
+    const files = [...input.files];
+    if (!files.length) {
+      alert("Choose one or more images first.");
+      return;
     }
-    input.value = "";
-    await loadRoomImages();
-    await loadRooms();
-  } catch (error) {
-    await loadRoomImages();
-    alert(error.message);
-  } finally {
-    button.disabled = false;
-  }
-});
+    const button = document.getElementById("save-room-images-btn");
+    button.disabled = true;
+    try {
+      for (const file of files) {
+        const { url } = await uploadImage(file);
+        await cmsRequest(
+          `/api/admin/rooms/${encodeURIComponent(currentRoomImagesRoom.id)}/images`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              url,
+              alt: `${currentRoomImagesRoom.name} photo`,
+            }),
+          },
+        );
+      }
+      input.value = "";
+      await loadRoomImages();
+      await loadRooms();
+    } catch (error) {
+      await loadRoomImages();
+      alert(error.message);
+    } finally {
+      button.disabled = false;
+    }
+  });
 
 async function loadGallery() {
   renderGallery(await cmsRequest("/api/admin/gallery"));
+}
+
+async function loadHeroImages() {
+  renderHeroImages(await cmsRequest("/api/admin/hero-images"));
+}
+
+function renderHeroImages(images) {
+  const grid = document.getElementById("cms-hero-images-grid");
+  grid.replaceChildren();
+  if (!images.length) {
+    grid.textContent = "No hero photos added.";
+    return;
+  }
+  images.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "cms-card";
+    const image = document.createElement("img");
+    image.src = item.url;
+    image.alt = item.alt;
+    const altInput = document.createElement("input");
+    altInput.type = "text";
+    altInput.value = item.alt;
+    altInput.maxLength = 300;
+    altInput.setAttribute("aria-label", "Alternative text");
+    const orderInput = document.createElement("input");
+    orderInput.type = "number";
+    orderInput.min = "1";
+    orderInput.step = "1";
+    orderInput.value = item.sort_order;
+    orderInput.setAttribute("aria-label", "Carousel order");
+    const actions = document.createElement("div");
+    actions.className = "cms-actions";
+    const save = document.createElement("button");
+    save.type = "button";
+    save.className = "btn-save";
+    save.textContent = "Save details";
+    save.addEventListener("click", async () => {
+      try {
+        await cmsRequest(`/api/admin/hero-images/${item.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            alt: altInput.value,
+            sort_order: orderInput.value,
+          }),
+        });
+        await loadHeroImages();
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "btn-delete";
+    remove.textContent = "Remove";
+    remove.addEventListener("click", async () => {
+      if (!confirm("Remove this hero photo from the carousel?")) return;
+      try {
+        await cmsRequest(`/api/admin/hero-images/${item.id}`, {
+          method: "DELETE",
+        });
+        await loadHeroImages();
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+    actions.append(save, remove);
+    card.append(image, altInput, orderInput, actions);
+    grid.appendChild(card);
+  });
+}
+
+async function saveHeroImage(event) {
+  event.preventDefault();
+  const form = document.getElementById("cms-hero-form");
+  const button = document.getElementById("save-hero-image-btn");
+  const status = document.getElementById("hero-image-upload-status");
+  const file = document.getElementById("hero-image-upload").files[0];
+  if (!file) {
+    status.textContent = "Choose an image first.";
+    status.className = "cms-save-status error";
+    return;
+  }
+
+  button.disabled = true;
+  status.textContent = "Uploading...";
+  status.className = "cms-save-status";
+  try {
+    const { url } = await uploadImage(file);
+    const alt =
+      document.getElementById("hero-image-alt").value.trim() || file.name;
+    await cmsRequest("/api/admin/hero-images", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, alt }),
+    });
+    form.reset();
+    status.textContent = "Hero photo added.";
+    status.className = "cms-save-status success";
+    await loadHeroImages();
+  } catch (error) {
+    status.textContent = error.message;
+    status.className = "cms-save-status error";
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function renderGallery(images) {
