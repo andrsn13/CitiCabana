@@ -190,14 +190,19 @@ a:hover {
   align-items: center;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 20px 24px;
+  padding: 4px 24px;
 }
 
 .nav-brand {
-  font-family: var(--font-display);
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: var(--brand-accent);
+  display: inline-flex;
+  align-items: center;
+}
+
+.nav-brand img {
+  display: block;
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
 }
 
 .nav-links {
