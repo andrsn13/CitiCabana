@@ -148,7 +148,7 @@ export const defaultRooms = [
     rate: 9000,
     inclusions: "Aircon, TV, private bathroom, private pool",
     inventory: 1,
-    image: "/images/room-villa.jpg",
+    image: "/images/Garden.jpg",
   },
 ];
 

@@ -41,13 +41,15 @@ export async function initializeDatabase(pool) {
     ["twin", "photo-1598928506311-c55dd580e5cb", "/images/room-twin.png"],
     ["couple", "photo-1522771739844-6a9f6d5f14af", "/images/room-couple.png"],
     ["family", "photo-1586023492125-27b2c045efd7", "/images/room-family.png"],
-    ["villa", "photo-1582268611958-ebfd161ef9cf", "/images/room-villa.jpg"],
+    ["villa", "photo-1582268611958-ebfd161ef9cf", "/images/Garden.jpg"],
   ];
   for (const [id, sourceId, localPath] of localRoomImages) {
+    const legacyPath =
+      id === "villa" ? "/images/room-villa.jpg" : localPath.replace(".png", ".jpg");
     await pool.query(
       `UPDATE rooms SET image = $1
        WHERE id = $2 AND (image LIKE $3 OR image = $4)`,
-      [localPath, id, `%${sourceId}%`, localPath.replace(".png", ".jpg")],
+      [localPath, id, `%${sourceId}%`, legacyPath],
     );
   }
 
