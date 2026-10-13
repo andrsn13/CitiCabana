@@ -63,6 +63,34 @@
           </div>
 
           <div class="card">
+            <h2>Confirmation Email</h2>
+            <div class="form-group">
+              <label for="booking-email-input">Customer email address</label>
+              <input
+                type="email"
+                id="booking-email-input"
+                maxlength="254"
+                required
+              />
+              <button
+                type="button"
+                class="btn btn-primary"
+                onclick="saveBookingEmail()"
+              >
+                Save Email
+              </button>
+              <span id="booking-email-save-status" role="status"></span>
+            </div>
+          </div>
+
+          <p
+            id="confirmation-email-feedback"
+            class="confirmation-email-feedback"
+            role="status"
+            hidden
+          ></p>
+
+          <div class="card">
             <h2>Booking Info</h2>
             <div id="detail-info">Loading...</div>
           </div>
@@ -78,27 +106,20 @@
           </div>
         </div>
 
-        <!-- Confirmation Modal / Inline Form for downpayment -->
+        <!-- Confirmation requires no in-system payment collection. -->
         <div
           id="confirm-panel"
           class="card"
           style="display: none; background: #eef2f5"
         >
           <h3>Confirm Booking</h3>
-          <div class="form-group">
-            <label>Downpayment Amount Collected (₱)</label>
-            <input type="number" id="dp-amount" min="0" />
-          </div>
-          <div class="form-group">
-            <label>Payment Method</label>
-            <select id="dp-method">
-              <option value="Cash">Cash</option>
-              <option value="GCash">GCash</option>
-              <option value="Bank transfer">Bank transfer</option>
-            </select>
-          </div>
+          <p>
+            Confirming sends the customer a booking confirmation email stating
+            that a 50% downpayment is required. Payment arrangements happen
+            directly with the front desk and are not recorded or processed here.
+          </p>
           <button class="btn btn-success" onclick="executeConfirm()">
-            Finalize Confirmation
+            Confirm Booking & Send Email
           </button>
           <button
             class="btn btn-outline"

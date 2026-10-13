@@ -8,20 +8,20 @@ import session from "express-session";
 import multer from "multer";
 import { defaultContent } from "./default-content.js";
 import { syncPhysicalRooms } from "./database.js";
+import { sendBookingConfirmation } from "./email.js";
 
 const uploadDirectory = fileURLToPath(new URL("./uploads/", import.meta.url));
 mkdirSync(uploadDirectory, { recursive: true });
 
 const bookingColumns = `
-  id, type, status, guest_name AS "guestName", contact, notes,
+  id, type, status, guest_name AS "guestName", guest_email AS "guestEmail", contact, notes,
   room_id AS "roomId", room_name AS "roomType",
   to_char(check_in, 'YYYY-MM-DD') AS "checkIn",
   to_char(check_out, 'YYYY-MM-DD') AS "checkOut", pax,
   event_type AS "eventType",
   to_char(event_date, 'YYYY-MM-DD') AS "eventDate",
   guest_count AS "guestCount", time_block AS "timeBlock",
-  downpayment_amount AS "downpaymentAmount",
-  downpayment_method AS "downpaymentMethod", created_at AS "createdAt"`;
+  created_at AS "createdAt"`;
 
 const asyncRoute = (handler) => (request, response, next) =>
   Promise.resolve(handler(request, response, next)).catch(next);
@@ -39,6 +39,44 @@ function validText(value, maxLength = 5000) {
     value.trim().length > 0 &&
     value.length <= maxLength
   );
+}
+
+function validEmail(value) {
+  return (
+    typeof value === "string" &&
+    value.length <= 254 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+  );
+}
+
+function validDate(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return (
+    !Number.isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === value
+  );
+}
+
+async function deliverConfirmation(booking) {
+  if (!booking.guestEmail) {
+    return {
+      sent: false,
+      message: "No customer email is saved for this booking.",
+    };
+  }
+  try {
+    await sendBookingConfirmation(booking);
+    return { sent: true };
+  } catch (error) {
+    console.error("Booking confirmation email failed:", error);
+    return {
+      sent: false,
+      message: error.message || "Could not send booking confirmation email.",
+    };
+  }
 }
 
 function slugify(value) {
@@ -95,7 +133,17 @@ export function registerApi(app, pool) {
           "SELECT content_value FROM site_content WHERE content_key = 'public'",
         ),
         pool.query(
-          "SELECT id, name, capacity, rate, inclusions, inventory, image FROM rooms ORDER BY sort_order, name",
+          `SELECT room.id, room.name, room.capacity, room.rate, room.inclusions,
+             room.inventory, room.image,
+             COALESCE(json_agg(json_build_object(
+               'id', image.id, 'url', image.url, 'alt', image.alt_text,
+               'sort_order', image.sort_order
+             ) ORDER BY image.sort_order, image.id)
+             FILTER (WHERE image.id IS NOT NULL), '[]') AS images
+           FROM rooms AS room
+           LEFT JOIN room_images AS image ON image.room_id = room.id
+           WHERE room.active = true
+           GROUP BY room.id ORDER BY room.sort_order, room.name`,
         ),
         pool.query(
           "SELECT id, url, alt_text AS alt, sort_order FROM gallery_images ORDER BY sort_order, id",
@@ -276,7 +324,14 @@ export function registerApi(app, pool) {
     requireAdmin,
     asyncRoute(async (_request, response) => {
       const result = await pool.query(
-        "SELECT * FROM rooms ORDER BY sort_order, name",
+        `SELECT room.*,
+           COALESCE(json_agg(json_build_object(
+             'id', image.id, 'url', image.url, 'alt', image.alt_text,
+             'sort_order', image.sort_order
+           ) ORDER BY image.sort_order, image.id)
+           FILTER (WHERE image.id IS NOT NULL), '[]') AS images
+         FROM rooms AS room LEFT JOIN room_images AS image ON image.room_id = room.id
+         GROUP BY room.id ORDER BY room.sort_order, room.name`,
       );
       response.json(result.rows);
     }),
@@ -292,6 +347,7 @@ export function registerApi(app, pool) {
         : slugify(room.name || "");
       const rate = Number(room.rate);
       const inventory = Number(room.inventory);
+      const active = room.active !== false;
       if (
         !validText(room.name, 120) ||
         !validText(room.capacity, 120) ||
@@ -299,7 +355,8 @@ export function registerApi(app, pool) {
         !Number.isFinite(rate) ||
         rate < 0 ||
         !Number.isInteger(inventory) ||
-        inventory < 1
+        inventory < 1 ||
+        (room.active !== undefined && typeof room.active !== "boolean")
       ) {
         return response.status(400).json({
           error:
@@ -307,25 +364,99 @@ export function registerApi(app, pool) {
         });
       }
 
-      const result = await pool.query(
-        `INSERT INTO rooms (id, name, capacity, rate, inclusions, inventory, image, sort_order)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE((SELECT max(sort_order) + 1 FROM rooms), 0))
-       ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, capacity = EXCLUDED.capacity,
-         rate = EXCLUDED.rate, inclusions = EXCLUDED.inclusions, inventory = EXCLUDED.inventory,
-         image = EXCLUDED.image
-       RETURNING *`,
-        [
-          id,
-          room.name.trim(),
-          room.capacity.trim(),
-          rate,
-          room.inclusions || "",
-          inventory,
-          room.image,
-        ],
-      );
-      await syncPhysicalRooms(pool, id);
-      response.status(201).json(result.rows[0]);
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const currentResult = await client.query(
+          "SELECT id, inventory, active FROM rooms WHERE id = $1 FOR UPDATE",
+          [id],
+        );
+        const current = currentResult.rows[0];
+        if (current && current.active && (!active || inventory < current.inventory)) {
+          const blockingRooms = await client.query(
+            `SELECT room_label, status FROM physical_rooms
+             WHERE room_id = $1 AND active = true
+               AND (NOT $2::boolean OR unit_number > $3)
+               AND status <> 'Ready'
+             LIMIT 1`,
+            [id, active, inventory],
+          );
+          if (blockingRooms.rowCount) {
+            await client.query("ROLLBACK");
+            return response.status(409).json({
+              error: `${blockingRooms.rows[0].room_label} is ${blockingRooms.rows[0].status}. Set it to Ready before reducing inventory or archiving this room type.`,
+            });
+          }
+          if (!active) {
+            const upcoming = await client.query(
+              `SELECT EXISTS (
+                 SELECT 1 FROM bookings
+                 WHERE room_id = $1 AND status IN ('Pending', 'Confirmed', 'CheckedIn')
+                   AND check_out >= CURRENT_DATE
+               ) AS exists`,
+              [id],
+            );
+            if (upcoming.rows[0].exists) {
+              await client.query("ROLLBACK");
+              return response.status(409).json({
+                error: "This room type has upcoming pending or confirmed bookings and cannot be archived yet.",
+              });
+            }
+          } else if (inventory < current.inventory) {
+            const overCapacity = await client.query(
+              `SELECT stay_day::date AS date, count(*)::int AS bookings
+               FROM bookings AS booking
+               CROSS JOIN LATERAL generate_series(
+                 GREATEST(booking.check_in, CURRENT_DATE),
+                 booking.check_out - 1,
+                 interval '1 day'
+               ) AS stay_day
+               WHERE booking.room_id = $1
+                 AND booking.status IN ('Confirmed', 'CheckedIn')
+                 AND booking.check_out > CURRENT_DATE
+               GROUP BY stay_day
+               HAVING count(*) > $2
+               LIMIT 1`,
+              [id, inventory],
+            );
+            if (overCapacity.rowCount) {
+              await client.query("ROLLBACK");
+              return response.status(409).json({
+                error: `Confirmed bookings exceed the new inventory on ${overCapacity.rows[0].date}.`,
+              });
+            }
+          }
+        }
+
+        const result = await client.query(
+          `INSERT INTO rooms (id, name, capacity, rate, inclusions, inventory, image, active, sort_order)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
+             COALESCE((SELECT max(sort_order) + 1 FROM rooms), 0))
+           ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name,
+             capacity = EXCLUDED.capacity, rate = EXCLUDED.rate,
+             inclusions = EXCLUDED.inclusions, inventory = EXCLUDED.inventory,
+             image = EXCLUDED.image, active = EXCLUDED.active
+           RETURNING *`,
+          [
+            id,
+            room.name.trim(),
+            room.capacity.trim(),
+            rate,
+            room.inclusions || "",
+            inventory,
+            room.image,
+            active,
+          ],
+        );
+        await syncPhysicalRooms(client, id);
+        await client.query("COMMIT");
+        response.status(current ? 200 : 201).json(result.rows[0]);
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
     }),
   );
 
@@ -333,12 +464,90 @@ export function registerApi(app, pool) {
     "/admin/rooms/:id",
     requireAdmin,
     asyncRoute(async (request, response) => {
-      const result = await pool.query(
-        "DELETE FROM rooms WHERE id = $1 RETURNING id",
+      const room = await pool.query(
+        "SELECT id, inventory, active FROM rooms WHERE id = $1",
         [request.params.id],
       );
-      if (!result.rowCount)
+      if (!room.rowCount)
         return response.status(404).json({ error: "Room not found" });
+      const blockingRooms = await pool.query(
+        `SELECT room_label, status FROM physical_rooms
+         WHERE room_id = $1 AND active = true AND status <> 'Ready' LIMIT 1`,
+        [request.params.id],
+      );
+      if (blockingRooms.rowCount) {
+        return response.status(409).json({
+          error: `${blockingRooms.rows[0].room_label} is ${blockingRooms.rows[0].status}. Set it to Ready before archiving this room type.`,
+        });
+      }
+      const upcoming = await pool.query(
+        `SELECT EXISTS (
+           SELECT 1 FROM bookings
+           WHERE room_id = $1 AND status IN ('Pending', 'Confirmed', 'CheckedIn')
+             AND check_out >= CURRENT_DATE
+         ) AS exists`,
+        [request.params.id],
+      );
+      if (upcoming.rows[0].exists) {
+        return response.status(409).json({
+          error: "This room type has upcoming pending or confirmed bookings and cannot be archived yet.",
+        });
+      }
+      await pool.query("UPDATE rooms SET active = false WHERE id = $1", [
+        request.params.id,
+      ]);
+      await syncPhysicalRooms(pool, request.params.id);
+      response.status(204).end();
+    }),
+  );
+
+  router.get(
+    "/admin/rooms/:id/images",
+    requireAdmin,
+    asyncRoute(async (request, response) => {
+      const result = await pool.query(
+        `SELECT id, url, alt_text AS alt, sort_order
+         FROM room_images WHERE room_id = $1 ORDER BY sort_order, id`,
+        [request.params.id],
+      );
+      response.json(result.rows);
+    }),
+  );
+
+  router.post(
+    "/admin/rooms/:id/images",
+    requireAdmin,
+    asyncRoute(async (request, response) => {
+      const { url, alt = "" } = request.body;
+      if (!validText(url, 1000) || typeof alt !== "string" || alt.length > 300) {
+        return response
+          .status(400)
+          .json({ error: "A valid image URL and alternative text are required" });
+      }
+      const result = await pool.query(
+        `INSERT INTO room_images (room_id, url, alt_text, sort_order)
+         SELECT room.id, $2, $3,
+           COALESCE((SELECT max(sort_order) + 1 FROM room_images WHERE room_id = room.id), 0)
+         FROM rooms AS room WHERE room.id = $1 AND room.active = true
+         RETURNING id, room_id AS "roomId", url, alt_text AS alt, sort_order`,
+        [request.params.id, url, alt.trim()],
+      );
+      if (!result.rowCount)
+        return response.status(404).json({ error: "Active room type not found" });
+      response.status(201).json(result.rows[0]);
+    }),
+  );
+
+  router.delete(
+    "/admin/rooms/:id/images/:imageId",
+    requireAdmin,
+    asyncRoute(async (request, response) => {
+      const result = await pool.query(
+        "DELETE FROM room_images WHERE id = $1 AND room_id = $2 RETURNING id",
+        [request.params.imageId, request.params.id],
+      );
+      if (!result.rowCount)
+        return response.status(404).json({ error: "Room image not found" });
       response.status(204).end();
     }),
   );
@@ -418,16 +627,17 @@ export function registerApi(app, pool) {
       const booking = request.body;
       if (
         !validText(booking.guestName, 160) ||
-        !validText(booking.contact, 80)
+        !validText(booking.contact, 80) ||
+        !validEmail(booking.guestEmail)
       ) {
         return response
           .status(400)
-          .json({ error: "Name and contact number are required" });
+          .json({ error: "Name, contact number, and a valid email are required" });
       }
 
       if (booking.type === "room") {
         const roomResult = await pool.query(
-          "SELECT id, name FROM rooms WHERE id = $1 OR name = $1 LIMIT 1",
+          "SELECT id, name FROM rooms WHERE active = true AND (id = $1 OR name = $1) LIMIT 1",
           [booking.roomId || booking.roomType || ""],
         );
         const room = roomResult.rows[0];
@@ -442,10 +652,11 @@ export function registerApi(app, pool) {
           });
         }
         const result = await pool.query(
-          `INSERT INTO bookings (type, guest_name, contact, notes, room_id, room_name, check_in, check_out, pax)
-         VALUES ('room', $1, $2, $3, $4, $5, $6, $7, $8) RETURNING ${bookingColumns}`,
+          `INSERT INTO bookings (type, guest_name, guest_email, contact, notes, room_id, room_name, check_in, check_out, pax)
+         VALUES ('room', $1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING ${bookingColumns}`,
           [
             booking.guestName.trim(),
+            booking.guestEmail.trim().toLowerCase(),
             booking.contact.trim(),
             booking.notes || "",
             room.id,
@@ -460,16 +671,18 @@ export function registerApi(app, pool) {
 
       if (
         booking.type === "event" &&
+        validEmail(booking.guestEmail) &&
         validText(booking.eventType, 80) &&
         booking.eventDate &&
         Number(booking.guestCount) > 0 &&
         validText(booking.timeBlock, 40)
       ) {
         const result = await pool.query(
-          `INSERT INTO bookings (type, guest_name, contact, notes, event_type, event_date, guest_count, time_block)
-         VALUES ('event', $1, $2, $3, $4, $5, $6, $7) RETURNING ${bookingColumns}`,
+          `INSERT INTO bookings (type, guest_name, guest_email, contact, notes, event_type, event_date, guest_count, time_block)
+         VALUES ('event', $1, $2, $3, $4, $5, $6, $7, $8) RETURNING ${bookingColumns}`,
           [
             booking.guestName.trim(),
+            booking.guestEmail.trim().toLowerCase(),
             booking.contact.trim(),
             booking.notes || "",
             booking.eventType,
@@ -519,20 +732,15 @@ export function registerApi(app, pool) {
       const booking = request.body;
       if (
         !validText(booking.guestName, 160) ||
-        !validText(booking.contact, 80)
+        !validText(booking.contact, 80) ||
+        (booking.guestEmail && !validEmail(booking.guestEmail))
       ) {
         return response
           .status(400)
           .json({ error: "Name and contact number are required" });
       }
       if (booking.type === "room") {
-        const roomResult = await pool.query(
-          "SELECT id, name FROM rooms WHERE id = $1 OR name = $1 LIMIT 1",
-          [booking.roomId || booking.roomType || ""],
-        );
-        const room = roomResult.rows[0];
         if (
-          !room ||
           !booking.checkIn ||
           !booking.checkOut ||
           booking.checkOut <= booking.checkIn
@@ -541,20 +749,62 @@ export function registerApi(app, pool) {
             .status(400)
             .json({ error: "Choose a room and valid dates" });
         }
-        const result = await pool.query(
-          `INSERT INTO bookings (type, status, guest_name, contact, room_id, room_name, check_in, check_out, pax)
-         VALUES ('room', 'Confirmed', $1, $2, $3, $4, $5, $6, $7) RETURNING ${bookingColumns}`,
-          [
-            booking.guestName.trim(),
-            booking.contact.trim(),
-            room.id,
-            room.name,
-            booking.checkIn,
-            booking.checkOut,
-            Number(booking.pax) || 1,
-          ],
-        );
-        return response.status(201).json(result.rows[0]);
+        const client = await pool.connect();
+        let result;
+        try {
+          await client.query("BEGIN");
+          const roomResult = await client.query(
+            `SELECT id, name, inventory FROM rooms
+             WHERE active = true AND (id = $1 OR name = $1)
+             FOR UPDATE`,
+            [booking.roomId || booking.roomType || ""],
+          );
+          const room = roomResult.rows[0];
+          if (!room) {
+            await client.query("ROLLBACK");
+            return response
+              .status(400)
+              .json({ error: "Choose an active room type" });
+          }
+          const overlap = await client.query(
+            `SELECT count(*)::int AS count FROM bookings
+             WHERE room_id = $1 AND status IN ('Confirmed', 'CheckedIn')
+               AND daterange(check_in, check_out, '[)')
+                 && daterange($2::date, $3::date, '[)')`,
+            [room.id, booking.checkIn, booking.checkOut],
+          );
+          if (overlap.rows[0].count >= room.inventory) {
+            await client.query("ROLLBACK");
+            return response
+              .status(409)
+              .json({ error: "No inventory remains for these dates" });
+          }
+          result = await client.query(
+            `INSERT INTO bookings (type, status, guest_name, guest_email, contact, room_id, room_name, check_in, check_out, pax)
+             VALUES ('room', 'Confirmed', $1, $2, $3, $4, $5, $6, $7, $8)
+             RETURNING ${bookingColumns}`,
+            [
+              booking.guestName.trim(),
+              booking.guestEmail?.trim().toLowerCase() || "",
+              booking.contact.trim(),
+              room.id,
+              room.name,
+              booking.checkIn,
+              booking.checkOut,
+              Number(booking.pax) || 1,
+            ],
+          );
+          await client.query("COMMIT");
+        } catch (error) {
+          await client.query("ROLLBACK");
+          throw error;
+        } finally {
+          client.release();
+        }
+        const emailDelivery = await deliverConfirmation(result.rows[0]);
+        return response
+          .status(201)
+          .json({ ...result.rows[0], emailDelivery });
       }
       if (
         booking.type === "event" &&
@@ -562,17 +812,21 @@ export function registerApi(app, pool) {
         booking.eventDate
       ) {
         const result = await pool.query(
-          `INSERT INTO bookings (type, status, guest_name, contact, event_type, event_date, guest_count)
-         VALUES ('event', 'Confirmed', $1, $2, $3, $4, $5) RETURNING ${bookingColumns}`,
+          `INSERT INTO bookings (type, status, guest_name, guest_email, contact, event_type, event_date, guest_count)
+         VALUES ('event', 'Confirmed', $1, $2, $3, $4, $5, $6) RETURNING ${bookingColumns}`,
           [
             booking.guestName.trim(),
+            booking.guestEmail?.trim().toLowerCase() || "",
             booking.contact.trim(),
             booking.eventType,
             booking.eventDate,
             Number(booking.guestCount) || 1,
           ],
         );
-        return response.status(201).json(result.rows[0]);
+        const emailDelivery = await deliverConfirmation(result.rows[0]);
+        return response
+          .status(201)
+          .json({ ...result.rows[0], emailDelivery });
       }
       response
         .status(400)
@@ -598,7 +852,7 @@ export function registerApi(app, pool) {
     "/admin/bookings/:id",
     requireAdmin,
     asyncRoute(async (request, response) => {
-      const { status, downpaymentAmount, downpaymentMethod } = request.body;
+      const { status } = request.body;
       const allowedStatuses = new Set([
         "Pending",
         "Confirmed",
@@ -624,9 +878,15 @@ export function registerApi(app, pool) {
 
         if (status === "Confirmed" && current.type === "room") {
           const roomResult = await client.query(
-            "SELECT inventory FROM rooms WHERE id = $1 FOR UPDATE",
+            "SELECT inventory, active FROM rooms WHERE id = $1 FOR UPDATE",
             [current.room_id],
           );
+          if (!roomResult.rows[0]?.active) {
+            await client.query("ROLLBACK");
+            return response
+              .status(409)
+              .json({ error: "This room type is no longer available for booking." });
+          }
           const inventory = roomResult.rows[0]?.inventory || 0;
           const overlap = await client.query(
             `SELECT count(*)::int AS count FROM bookings
@@ -643,25 +903,40 @@ export function registerApi(app, pool) {
         }
 
         const result = await client.query(
-          `UPDATE bookings SET status = $1,
-           downpayment_amount = COALESCE($2, downpayment_amount),
-           downpayment_method = COALESCE($3, downpayment_method)
-         WHERE id = $4 RETURNING ${bookingColumns}`,
-          [
-            status,
-            downpaymentAmount == null ? null : Number(downpaymentAmount),
-            downpaymentMethod || null,
-            request.params.id,
-          ],
+          `UPDATE bookings SET status = $1
+           WHERE id = $2 RETURNING ${bookingColumns}`,
+          [status, request.params.id],
         );
         await client.query("COMMIT");
-        response.json(result.rows[0]);
+
+        let emailDelivery = null;
+        if (status === "Confirmed" && current.status !== "Confirmed") {
+          emailDelivery = await deliverConfirmation(result.rows[0]);
+        }
+        response.json({ ...result.rows[0], emailDelivery });
       } catch (error) {
         await client.query("ROLLBACK");
         throw error;
       } finally {
         client.release();
       }
+    }),
+  );
+
+  router.post(
+    "/admin/bookings/:id/resend-confirmation",
+    requireAdmin,
+    asyncRoute(async (request, response) => {
+      const result = await pool.query(
+        `SELECT ${bookingColumns} FROM bookings WHERE id = $1 AND status = 'Confirmed'`,
+        [request.params.id],
+      );
+      if (!result.rowCount)
+        return response
+          .status(404)
+          .json({ error: "Confirmed booking not found" });
+      const emailDelivery = await deliverConfirmation(result.rows[0]);
+      response.json({ emailDelivery });
     }),
   );
 
@@ -717,9 +992,19 @@ export function registerApi(app, pool) {
         return response
           .status(400)
           .json({ error: "Start and end dates are required" });
+      if (
+        !validDate(start) ||
+        !validDate(end) ||
+        start > end
+      ) {
+        return response
+          .status(400)
+          .json({ error: "Enter a valid date range with start on or before end" });
+      }
       const result = await pool.query(
         `SELECT count(*)::int AS total_bookings,
-       COALESCE(sum(downpayment_amount), 0)::numeric(10, 2) AS total_downpayments
+       count(*) FILTER (WHERE type = 'room')::int AS room_bookings,
+       count(*) FILTER (WHERE type = 'event')::int AS event_bookings
        FROM bookings WHERE status = 'Confirmed' AND created_at::date BETWEEN $1::date AND $2::date`,
         [start, end],
       );
@@ -741,6 +1026,26 @@ export function registerApi(app, pool) {
          ORDER BY room.sort_order, physical.unit_number`,
       );
       response.json(result.rows);
+    }),
+  );
+
+  router.patch(
+    "/admin/bookings/:id/email",
+    requireAdmin,
+    asyncRoute(async (request, response) => {
+      if (!validEmail(request.body.guestEmail)) {
+        return response
+          .status(400)
+          .json({ error: "Enter a valid customer email address" });
+      }
+      const result = await pool.query(
+        `UPDATE bookings SET guest_email = $1 WHERE id = $2
+         RETURNING id, guest_email AS "guestEmail"`,
+        [request.body.guestEmail.trim().toLowerCase(), request.params.id],
+      );
+      if (!result.rowCount)
+        return response.status(404).json({ error: "Booking not found" });
+      response.json(result.rows[0]);
     }),
   );
 

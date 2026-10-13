@@ -110,9 +110,9 @@ export const defaultRooms = [
     name: "Standard Room",
     capacity: "2 pax (double bed)",
     rate: 1000,
-    inclusions: "",
+    inclusions: "Aircon, TV, private bathroom",
     inventory: 5,
-    image: "/images/room-standard.jpg",
+    image: "/images/room-standard.png",
   },
   {
     id: "twin",
@@ -121,7 +121,7 @@ export const defaultRooms = [
     rate: 1500,
     inclusions: "Aircon, TV, private bathroom",
     inventory: 1,
-    image: "/images/room-twin.jpg",
+    image: "/images/room-twin.png",
   },
   {
     id: "couple",
@@ -130,7 +130,7 @@ export const defaultRooms = [
     rate: 1500,
     inclusions: "Aircon, TV, private bathroom",
     inventory: 4,
-    image: "/images/room-couple.jpg",
+    image: "/images/room-couple.png",
   },
   {
     id: "family",
@@ -139,7 +139,7 @@ export const defaultRooms = [
     rate: 2300,
     inclusions: "Aircon, TV, private bathroom",
     inventory: 2,
-    image: "/images/room-family.jpg",
+    image: "/images/room-family.png",
   },
   {
     id: "villa",
@@ -159,6 +159,6 @@ export const defaultGallery = [
   "/images/gallery-04.jpg",
   "/images/gallery-05.jpg",
   "/images/hero.jpg",
-  "/images/room-standard.jpg",
+  "/images/room-standard.png",
   "/images/events.jpg",
 ];

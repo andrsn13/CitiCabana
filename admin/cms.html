@@ -46,6 +46,9 @@
         padding: 1.5rem;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
       }
+      .cms-card.is-archived {
+        opacity: 0.7;
+      }
       .cms-card img {
         width: 100%;
         height: 200px;
@@ -115,6 +118,10 @@
         border: 1px solid var(--admin-border);
         border-radius: 4px;
       }
+      .form-group input[type="checkbox"] {
+        width: auto;
+        margin-right: 8px;
+      }
       .cms-content-field input[type="file"] {
         border: 0;
         padding-left: 0;
@@ -139,6 +146,23 @@
       .cms-save-status.error,
       .cms-error {
         color: var(--admin-danger);
+      }
+      .cms-room-images-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+        margin: 1rem 0;
+      }
+      .cms-room-image {
+        min-width: 0;
+        padding: 0.75rem;
+        border: 1px solid var(--admin-border);
+        border-radius: 6px;
+      }
+      .cms-room-image img {
+        width: 100%;
+        height: 110px;
+        object-fit: cover;
       }
     </style>
   </head>
@@ -306,7 +330,13 @@
           </div>
           <div class="form-group">
             <label>Inventory (Number of units)</label>
-            <input type="number" id="room-inventory-input" required />
+            <input type="number" id="room-inventory-input" min="1" required />
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="room-active-input" checked />
+              Available on the public website
+            </label>
           </div>
           <div class="form-group image-upload-wrapper">
             <label>Room Image</label>
@@ -345,6 +375,63 @@
             </button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <div
+      id="cms-room-images-modal"
+      class="modal-overlay hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="room-images-title"
+      style="
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+      "
+    >
+      <div
+        style="
+          background: white;
+          padding: 2rem;
+          border-radius: 8px;
+          width: min(90%, 800px);
+          max-height: 90vh;
+          overflow-y: auto;
+        "
+      >
+        <h2 id="room-images-title">Manage Room Carousel Images</h2>
+        <p id="room-images-room-name"></p>
+        <form id="room-images-form">
+          <div class="form-group">
+            <label for="room-gallery-upload">Add images</label>
+            <input
+              type="file"
+              id="room-gallery-upload"
+              accept="image/*"
+              multiple
+              aria-describedby="room-images-guidance"
+            />
+            <small id="room-images-guidance">
+              The main room image remains the first carousel slide. Uploaded images follow it.
+            </small>
+          </div>
+          <button type="submit" class="btn-save" id="save-room-images-btn">
+            Upload selected images
+          </button>
+        </form>
+        <div
+          id="cms-room-images-list"
+          class="cms-room-images-list"
+          aria-live="polite"
+        ></div>
+        <button type="button" class="btn-delete" onclick="closeRoomImagesModal()">
+          Close
+        </button>
       </div>
     </div>
 

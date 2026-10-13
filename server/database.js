@@ -36,17 +36,18 @@ export async function initializeDatabase(pool) {
     [
       "standard",
       "photo-1618773928121-c32242fa11f5",
-      "/images/room-standard.jpg",
+      "/images/room-standard.png",
     ],
-    ["twin", "photo-1598928506311-c55dd580e5cb", "/images/room-twin.jpg"],
-    ["couple", "photo-1522771739844-6a9f6d5f14af", "/images/room-couple.jpg"],
-    ["family", "photo-1586023492125-27b2c045efd7", "/images/room-family.jpg"],
+    ["twin", "photo-1598928506311-c55dd580e5cb", "/images/room-twin.png"],
+    ["couple", "photo-1522771739844-6a9f6d5f14af", "/images/room-couple.png"],
+    ["family", "photo-1586023492125-27b2c045efd7", "/images/room-family.png"],
     ["villa", "photo-1582268611958-ebfd161ef9cf", "/images/room-villa.jpg"],
   ];
   for (const [id, sourceId, localPath] of localRoomImages) {
     await pool.query(
-      "UPDATE rooms SET image = $1 WHERE id = $2 AND image LIKE $3",
-      [localPath, id, `%${sourceId}%`],
+      `UPDATE rooms SET image = $1
+       WHERE id = $2 AND (image LIKE $3 OR image = $4)`,
+      [localPath, id, `%${sourceId}%`, localPath.replace(".png", ".jpg")],
     );
   }
 
@@ -57,14 +58,14 @@ export async function initializeDatabase(pool) {
     ["photo-1530103862676-de8892bf309c", "/images/gallery-04.jpg"],
     ["photo-1499696010180-025ef6e1a8f9", "/images/gallery-05.jpg"],
     ["photo-1540541338287-41700207dee6", "/images/hero.jpg"],
-    ["photo-1618773928121-c32242fa11f5", "/images/room-standard.jpg"],
+    ["photo-1618773928121-c32242fa11f5", "/images/room-standard.png"],
     ["photo-1519225421980-715cb0215aed", "/images/events.jpg"],
   ];
   for (const [sourceId, localPath] of localGalleryImages) {
-    await pool.query("UPDATE gallery_images SET url = $1 WHERE url LIKE $2", [
-      localPath,
-      `%${sourceId}%`,
-    ]);
+    await pool.query(
+      "UPDATE gallery_images SET url = $1 WHERE url LIKE $2 OR url = $3",
+      [localPath, `%${sourceId}%`, localPath.replace(".png", ".jpg")],
+    );
   }
 
   const roomCount = await pool.query(
@@ -74,7 +75,7 @@ export async function initializeDatabase(pool) {
     for (const [index, room] of defaultRooms.entries()) {
       await pool.query(
         `INSERT INTO rooms (id, name, capacity, rate, inclusions, inventory, image, sort_order)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+         VALUES ($1, $2, $3, $4, COALESCE($5, ''), $6, $7, $8)`,
         [
           room.id,
           room.name,
@@ -98,6 +99,35 @@ export async function initializeDatabase(pool) {
         "INSERT INTO gallery_images (url, alt_text, sort_order) VALUES ($1, $2, $3)",
         [url, `Citi Cabana gallery photo ${index + 1}`, index + 1],
       );
+    }
+  }
+
+  const villaPlaceholderSeed = await pool.query(
+    `INSERT INTO app_settings (setting_key, setting_value)
+     VALUES ('villa-carousel-placeholders-v1', 'applied')
+     ON CONFLICT (setting_key) DO NOTHING
+     RETURNING setting_key`,
+  );
+  if (villaPlaceholderSeed.rowCount) {
+    const villa = await pool.query(
+      "SELECT id FROM rooms WHERE id = 'villa' AND active = true",
+    );
+    if (villa.rowCount) {
+      for (const [index, image] of [
+        "/images/gallery-01.jpg",
+        "/images/gallery-02.jpg",
+      ].entries()) {
+        await pool.query(
+          `INSERT INTO room_images (room_id, url, alt_text, sort_order)
+           VALUES ($1, $2, $3, $4)`,
+          [
+            villa.rows[0].id,
+            image,
+            `Villa image placeholder ${index + 1}`,
+            index + 1,
+          ],
+        );
+      }
     }
   }
 
@@ -126,13 +156,21 @@ export async function syncPhysicalRooms(pool, roomId = null) {
   const values = roomId ? [roomId] : [];
   const filter = roomId ? "WHERE id = $1" : "";
   const rooms = await pool.query(
-    `SELECT id, name, inventory FROM rooms ${filter} ORDER BY name`,
+    `SELECT id, name, inventory, active FROM rooms ${filter} ORDER BY name`,
     values,
   );
 
   for (const room of rooms.rows) {
+    if (!room.active) {
+      await pool.query(
+        "UPDATE physical_rooms SET active = false WHERE room_id = $1",
+        [room.id],
+      );
+      continue;
+    }
+
     await pool.query(
-      "UPDATE physical_rooms SET active = (unit_number <= $2) WHERE room_id = $1",
+      "UPDATE physical_rooms SET active = false WHERE room_id = $1 AND unit_number > $2",
       [room.id, room.inventory],
     );
 

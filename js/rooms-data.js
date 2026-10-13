@@ -14,7 +14,7 @@ const fallbackRoomsData = [
     rate: 1000,
     inclusions: "Aircon, TV, private bathroom",
     inventory: 5,
-    image: "/images/room-standard.jpg",
+    image: "/images/room-standard.png",
   },
   {
     id: "twin",
@@ -23,7 +23,7 @@ const fallbackRoomsData = [
     rate: 1500,
     inclusions: "Aircon, TV, private bathroom",
     inventory: 1,
-    image: "/images/room-twin.jpg",
+    image: "/images/room-twin.png",
   },
   {
     id: "couple",
@@ -32,7 +32,7 @@ const fallbackRoomsData = [
     rate: 1500,
     inclusions: "Aircon, TV, private bathroom",
     inventory: 4,
-    image: "/images/room-couple.jpg",
+    image: "/images/room-couple.png",
   },
   {
     id: "family",
@@ -41,7 +41,7 @@ const fallbackRoomsData = [
     rate: 2300,
     inclusions: "Aircon, TV, private bathroom",
     inventory: 2,
-    image: "/images/room-family.jpg",
+    image: "/images/room-family.png",
   },
   {
     id: "villa",
@@ -51,6 +51,10 @@ const fallbackRoomsData = [
     inclusions: "Aircon, TV, private bathroom, private pool",
     inventory: 1,
     image: "/images/room-villa.jpg",
+    images: [
+      { url: "/images/gallery-01.jpg", alt: "Villa image placeholder 1" },
+      { url: "/images/gallery-02.jpg", alt: "Villa image placeholder 2" },
+    ],
   },
 ];
 
@@ -80,7 +84,7 @@ const fallbackGalleryImages = [
     sort_order: 6,
   },
   {
-    url: "/images/room-standard.jpg",
+    url: "/images/room-standard.png",
     sort_order: 7,
   },
   {
