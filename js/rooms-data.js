@@ -5,6 +5,12 @@ let roomsData = [];
 let galleryImages = [];
 let galleryImageAltTexts = [];
 let siteContent = {};
+const heroCarouselImages = [
+  "/images/hero-02.png",
+  "/images/hero-03.png",
+  "/images/hero-04.png",
+  "/images/hero-05.png",
+];
 
 const fallbackRoomsData = [
   {

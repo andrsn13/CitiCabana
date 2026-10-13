@@ -24,13 +24,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderSplitScreenRooms();
   renderEventsSection();
   renderBentoGrid();
-  setupHeroCarousel();
+  await setupHeroCarousel();
   setupMobileMenu();
   setupOrderSummaryListeners();
   setupScrollspy();
 });
 
-function setupHeroCarousel() {
+async function setupHeroCarousel() {
   const hero = document.getElementById("home");
   const controls = document.getElementById("hero-carousel-controls");
   const indicators = document.getElementById("hero-carousel-indicators");
@@ -38,13 +38,25 @@ function setupHeroCarousel() {
   const next = document.getElementById("hero-carousel-next");
   if (!hero || !controls || !indicators || !previous || !next) return;
 
-  const slides = [
-    ...new Set(
-      [siteContent.heroImage || "/images/hero.jpg", ...galleryImages].filter(
-        Boolean,
-      ),
-    ),
+  const slideUrls = [
+    ...new Set([
+      siteContent.heroImage || "/images/hero.jpg",
+      ...heroCarouselImages,
+    ]),
   ];
+  const slides = (
+    await Promise.all(
+      slideUrls.map(
+        (url) =>
+          new Promise((resolve) => {
+            const image = new Image();
+            image.onload = () => resolve(url);
+            image.onerror = () => resolve(null);
+            image.src = url;
+          }),
+      ),
+    )
+  ).filter(Boolean);
   if (slides.length < 2) return;
 
   let activeSlide = 0;
@@ -63,10 +75,7 @@ function setupHeroCarousel() {
     activeSlide = (index + slides.length) % slides.length;
     hero.style.backgroundImage = `linear-gradient(rgba(42, 43, 37, 0.4), rgba(42, 43, 37, 0.4)), url("${slides[activeSlide].replaceAll('"', "")}")`;
     indicatorButtons.forEach((button, buttonIndex) => {
-      button.setAttribute(
-        "aria-pressed",
-        String(buttonIndex === activeSlide),
-      );
+      button.setAttribute("aria-pressed", String(buttonIndex === activeSlide));
     });
   }
 
@@ -199,12 +208,10 @@ function setupVillaCarousel(row, room) {
   function showSlide(index) {
     activeSlide = (index + slides.length) % slides.length;
     image.src = slides[activeSlide].url;
-    image.alt = slides[activeSlide].alt || `${room.name} - image ${activeSlide + 1}`;
+    image.alt =
+      slides[activeSlide].alt || `${room.name} - image ${activeSlide + 1}`;
     indicatorButtons.forEach((button, buttonIndex) => {
-      button.setAttribute(
-        "aria-pressed",
-        String(buttonIndex === activeSlide),
-      );
+      button.setAttribute("aria-pressed", String(buttonIndex === activeSlide));
     });
   }
 

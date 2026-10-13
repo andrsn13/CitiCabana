@@ -108,7 +108,9 @@
             <input type="date" id="bar-checkin" />
           </div>
           <div class="bar-field">
-            <label for="bar-checkout" data-content="barCheckout">Check-out</label>
+            <label for="bar-checkout" data-content="barCheckout"
+              >Check-out</label
+            >
             <input type="date" id="bar-checkout" />
           </div>
           <div class="bar-field">
@@ -367,7 +369,17 @@
                   </div>
                   <div class="form-group">
                     <label for="room-email">Email address *</label>
-                    <input type="email" id="room-email" maxlength="254" required />
+                    <input
+                      type="email"
+                      id="room-email"
+                      maxlength="254"
+                      aria-describedby="room-email-notice"
+                      required
+                    />
+                    <small class="email-notice" id="room-email-notice">
+                      We’ll email you after our team confirms your request.
+                      Submitting this form does not mean it is confirmed.
+                    </small>
                   </div>
                   <div class="form-group">
                     <label data-content="notesLabel">Notes (Optional)</label>
@@ -497,7 +509,17 @@
                   </div>
                   <div class="form-group">
                     <label for="event-email">Email address *</label>
-                    <input type="email" id="event-email" maxlength="254" required />
+                    <input
+                      type="email"
+                      id="event-email"
+                      maxlength="254"
+                      aria-describedby="event-email-notice"
+                      required
+                    />
+                    <small class="email-notice" id="event-email-notice">
+                      We’ll email you after our team confirms your request.
+                      Submitting this form does not mean it is confirmed.
+                    </small>
                   </div>
                   <div class="form-group">
                     <label data-content="eventNotesLabel"
