@@ -144,7 +144,11 @@ export function registerApi(app, pool) {
            FROM rooms AS room
            LEFT JOIN room_images AS image ON image.room_id = room.id
            WHERE room.active = true
-           GROUP BY room.id ORDER BY room.sort_order, room.name`,
+           GROUP BY room.id
+           ORDER BY CASE
+             WHEN room.id = 'villa' OR room.name ILIKE '%villa%' THEN 1
+             ELSE 0
+           END, room.sort_order, room.name`,
           ),
           pool.query(
             "SELECT id, url, alt_text AS alt, sort_order FROM gallery_images ORDER BY sort_order, id",
