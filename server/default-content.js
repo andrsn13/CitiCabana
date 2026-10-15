@@ -11,7 +11,7 @@ export const defaultContent = {
   previousImageLabel: "Previous image",
   nextImageLabel: "Next image",
   heroTitle: "Citi Cabana",
-  heroTagline: "Your fun and peaceful escape from the everyday rush.",
+  heroTagline: "COMFORTMAXXING? Citi Cabana's got you! From relaxing views and tropical vibes to cozy, comforting rooms, we've got everything you need for your next little escape",
   heroImage: "/images/hero.jpg",
   barCheckin: "Check-in",
   barCheckout: "Check-out",
@@ -35,7 +35,7 @@ export const defaultContent = {
   galleryModalTitle: "Full Gallery",
   pageTitle: "Citi Cabana Farm House Inn",
   pageDescription:
-    "Your fun and peaceful escape from the everyday rush. Discover good vibes, tropical feels, and unforgettable moments!",
+    "COMFORTMAXXING? Citi Cabana's got you! From relaxing views and tropical vibes to cozy, comforting rooms, we've got everything you need for your next little escape. ",
   address: "Zone 1, Peter Jay Dunca Street\nSan Isidro, Tarlac City",
   landmark: "Landmark: 7-Eleven San Isidro, after the San Isidro Bridge",
   facebookLabel: "Follow on Facebook",

@@ -20,6 +20,17 @@ export async function initializeDatabase(pool) {
     [JSON.stringify(defaultContent)],
   );
 
+  await pool.query(
+    `UPDATE site_content
+     SET content_value = jsonb_set(content_value, '{heroTagline}', to_jsonb($1::text))
+     WHERE content_key = 'public'
+       AND content_value->>'heroTagline' = $2`,
+    [
+      defaultContent.heroTagline,
+      "Your fun and peaceful escape from the everyday rush.",
+    ],
+  );
+
   const localSiteImages = [
     ["heroImage", "photo-1540541338287-41700207dee6", "/images/hero.jpg"],
     ["eventsImage", "photo-1519225421980-715cb0215aed", "/images/events.jpg"],
