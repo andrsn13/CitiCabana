@@ -1,8 +1,13 @@
 // Modal form handling
 
+let availabilityRequestId = 0;
+
 document.addEventListener("DOMContentLoaded", () => {
   const roomForm = document.getElementById("room-booking-form");
   const eventForm = document.getElementById("event-booking-form");
+  const checkIn = document.getElementById("room-checkin");
+  const checkOut = document.getElementById("room-checkout");
+  const roomSelect = document.getElementById("room-type-select");
 
   if (roomForm) {
     roomForm.addEventListener("submit", handleRoomBooking);
@@ -10,7 +15,59 @@ document.addEventListener("DOMContentLoaded", () => {
   if (eventForm) {
     eventForm.addEventListener("submit", handleEventBooking);
   }
+  [checkIn, checkOut, roomSelect].forEach((input) => {
+    input?.addEventListener("change", checkRoomAvailability);
+  });
 });
+
+async function checkRoomAvailability() {
+  const checkId = ++availabilityRequestId;
+  const roomId = document.getElementById("room-type-select").value;
+  const checkIn = document.getElementById("room-checkin").value;
+  const checkOut = document.getElementById("room-checkout").value;
+  const message = document.getElementById("room-availability-message");
+  const submitButton = document.querySelector(
+    '#room-booking-form button[type="submit"]',
+  );
+
+  message.classList.remove("unavailable");
+  if (!roomId || !checkIn || !checkOut || checkOut <= checkIn) {
+    message.textContent = "";
+    submitButton.disabled = false;
+    return;
+  }
+
+  message.textContent = "Checking availability...";
+  submitButton.disabled = true;
+  try {
+    const query = new URLSearchParams({ roomId, checkIn, checkOut });
+    const response = await fetch(`/api/room-availability?${query}`);
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || "Could not check room availability");
+    }
+    if (checkId !== availabilityRequestId) return;
+
+    if (!result.available) {
+      message.textContent =
+        "This room type is fully booked for those dates. Choose another room or dates.";
+      message.classList.add("unavailable");
+      submitButton.disabled = true;
+      return;
+    }
+
+    message.textContent = `${result.availableRooms} ${
+      result.availableRooms === 1 ? "room" : "rooms"
+    } available for your selected dates.`;
+    submitButton.disabled = false;
+  } catch (error) {
+    if (checkId !== availabilityRequestId) return;
+    console.error("Error checking room availability:", error);
+    message.textContent =
+      "Availability could not be checked. It will be verified when you submit.";
+    submitButton.disabled = false;
+  }
+}
 
 async function submitBooking(bookingData) {
   const response = await fetch("/api/bookings", {
@@ -67,8 +124,8 @@ async function handleRoomBooking(e) {
     );
   } finally {
     const btn = e.target.querySelector('button[type="submit"]');
-    btn.disabled = false;
     btn.textContent = "Submit Reservation Request";
+    await checkRoomAvailability();
   }
 }
 
@@ -117,6 +174,7 @@ function resetRoomForm() {
   document.getElementById("room-success-msg").classList.add("hidden");
   // Reset sticky summary
   if (typeof calculateOrderSummary === "function") calculateOrderSummary();
+  checkRoomAvailability();
 }
 
 function resetEventForm() {

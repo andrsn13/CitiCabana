@@ -831,6 +831,14 @@ a:hover {
   margin-bottom: 15px;
   display: none;
 }
+.availability-message {
+  color: var(--text-light);
+  font-size: 0.9rem;
+  margin: 0 0 15px;
+}
+.availability-message.unavailable {
+  color: #a93226;
+}
 
 /* Sticky Summary */
 .sticky-summary {

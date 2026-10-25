@@ -16,6 +16,7 @@ mkdirSync(uploadDirectory, { recursive: true });
 const bookingColumns = `
   id, type, status, guest_name AS "guestName", guest_email AS "guestEmail", contact, notes,
   room_id AS "roomId", room_name AS "roomType",
+  physical_room_id AS "physicalRoomId",
   to_char(check_in, 'YYYY-MM-DD') AS "checkIn",
   to_char(check_out, 'YYYY-MM-DD') AS "checkOut", pax,
   event_type AS "eventType",
@@ -58,6 +59,88 @@ function validDate(value) {
     !Number.isNaN(parsed.getTime()) &&
     parsed.toISOString().slice(0, 10) === value
   );
+}
+
+async function getRoomBookingAvailability(
+  queryable,
+  roomId,
+  checkIn,
+  checkOut,
+  excludedBookingId = null,
+) {
+  const result = await queryable.query(
+    `SELECT COALESCE(max(daily.booked), 0)::int AS booked
+     FROM (
+       SELECT dates.stay_day::date AS date, count(booking.id)::int AS booked
+       FROM generate_series(
+         $2::date, $3::date - 1, interval '1 day'
+       ) AS dates(stay_day)
+       LEFT JOIN bookings AS booking
+         ON booking.room_id = $1
+        AND booking.type = 'room'
+        AND booking.status IN ('Pending', 'Confirmed', 'CheckedIn')
+        AND daterange(booking.check_in, booking.check_out, '[)')
+          @> dates.stay_day::date
+        AND ($4::bigint IS NULL OR booking.id <> $4)
+       GROUP BY dates.stay_day
+     ) AS daily`,
+    [roomId, checkIn, checkOut, excludedBookingId],
+  );
+  return result.rows[0].booked;
+}
+
+async function assignPhysicalRoom(
+  client,
+  bookingId,
+  roomId,
+  checkIn,
+  checkOut,
+) {
+  const availableRoom = await client.query(
+    `SELECT physical.id
+     FROM physical_rooms AS physical
+     WHERE physical.room_id = $1
+       AND physical.active = true
+       AND physical.status <> 'Needs Cleaning'
+       AND (
+         physical.status = 'Ready'
+         OR EXISTS (
+           SELECT 1 FROM bookings AS linked
+           WHERE linked.physical_room_id = physical.id
+             AND linked.status IN ('Pending', 'Confirmed', 'CheckedIn')
+         )
+       )
+       AND NOT EXISTS (
+         SELECT 1 FROM bookings AS overlapping
+         WHERE overlapping.physical_room_id = physical.id
+           AND overlapping.id <> $2
+           AND overlapping.status IN ('Pending', 'Confirmed', 'CheckedIn')
+           AND daterange(overlapping.check_in, overlapping.check_out, '[)')
+             && daterange($3::date, $4::date, '[)')
+       )
+     ORDER BY CASE WHEN physical.status = 'Ready' THEN 0 ELSE 1 END,
+       physical.unit_number
+     FOR UPDATE OF physical SKIP LOCKED
+     LIMIT 1`,
+    [roomId, bookingId, checkIn, checkOut],
+  );
+  const physicalRoomId = availableRoom.rows[0]?.id;
+  if (!physicalRoomId) return null;
+
+  await client.query(
+    `UPDATE physical_rooms SET status = 'Occupied', last_updated = now()
+     WHERE id = $1 AND EXISTS (
+       SELECT 1 FROM bookings
+       WHERE id = $2 AND status IN ('Confirmed', 'CheckedIn')
+         AND check_in <= CURRENT_DATE AND check_out > CURRENT_DATE
+     )`,
+    [physicalRoomId, bookingId],
+  );
+  await client.query(
+    "UPDATE bookings SET physical_room_id = $1 WHERE id = $2",
+    [physicalRoomId, bookingId],
+  );
+  return physicalRoomId;
 }
 
 async function deliverConfirmation(booking) {
@@ -163,6 +246,45 @@ export function registerApi(app, pool) {
         rooms: roomResult.rows,
         gallery: galleryResult.rows,
         heroImages: heroImageResult.rows,
+      });
+    }),
+  );
+
+  router.get(
+    "/room-availability",
+    asyncRoute(async (request, response) => {
+      const { roomId, checkIn, checkOut } = request.query;
+      if (
+        !validText(roomId, 80) ||
+        !validDate(checkIn) ||
+        !validDate(checkOut) ||
+        checkOut <= checkIn
+      ) {
+        return response.status(400).json({
+          error: "Choose a room and valid check-in/check-out dates",
+        });
+      }
+
+      const roomResult = await pool.query(
+        "SELECT id, inventory FROM rooms WHERE id = $1 AND active = true",
+        [roomId],
+      );
+      const room = roomResult.rows[0];
+      if (!room) {
+        return response.status(404).json({ error: "Room type not found" });
+      }
+
+      const booked = await getRoomBookingAvailability(
+        pool,
+        room.id,
+        checkIn,
+        checkOut,
+      );
+      const availableRooms = Math.max(room.inventory - booked, 0);
+      response.json({
+        available: availableRooms > 0,
+        availableRooms,
+        inventory: room.inventory,
       });
     }),
   );
@@ -426,7 +548,7 @@ export function registerApi(app, pool) {
                  interval '1 day'
                ) AS stay_day
                WHERE booking.room_id = $1
-                 AND booking.status IN ('Confirmed', 'CheckedIn')
+                 AND booking.status IN ('Pending', 'Confirmed', 'CheckedIn')
                  AND booking.check_out > CURRENT_DATE
                GROUP BY stay_day
                HAVING count(*) > $2
@@ -742,36 +864,84 @@ export function registerApi(app, pool) {
       }
 
       if (booking.type === "room") {
-        const roomResult = await pool.query(
-          "SELECT id, name FROM rooms WHERE active = true AND (id = $1 OR name = $1) LIMIT 1",
-          [booking.roomId || booking.roomType || ""],
-        );
-        const room = roomResult.rows[0];
         if (
-          !room ||
-          !booking.checkIn ||
-          !booking.checkOut ||
+          !validDate(booking.checkIn) ||
+          !validDate(booking.checkOut) ||
           booking.checkOut <= booking.checkIn
         ) {
           return response.status(400).json({
             error: "Choose a room and valid check-in/check-out dates",
           });
         }
-        const result = await pool.query(
-          `INSERT INTO bookings (type, guest_name, guest_email, contact, notes, room_id, room_name, check_in, check_out, pax)
-         VALUES ('room', $1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING ${bookingColumns}`,
-          [
-            booking.guestName.trim(),
-            booking.guestEmail.trim().toLowerCase(),
-            booking.contact.trim(),
-            booking.notes || "",
+        const client = await pool.connect();
+        let result;
+        try {
+          await client.query("BEGIN");
+          const roomResult = await client.query(
+            `SELECT id, name, inventory FROM rooms
+             WHERE active = true AND id = $1
+             FOR UPDATE`,
+            [booking.roomId || ""],
+          );
+          const room = roomResult.rows[0];
+          if (!room) {
+            await client.query("ROLLBACK");
+            return response.status(400).json({
+              error: "Choose an active room type",
+            });
+          }
+
+          const booked = await getRoomBookingAvailability(
+            client,
             room.id,
-            room.name,
             booking.checkIn,
             booking.checkOut,
-            Number(booking.pax) || 1,
-          ],
-        );
+          );
+          if (booked >= room.inventory) {
+            await client.query("ROLLBACK");
+            return response.status(409).json({
+              error:
+                "This room type is fully booked for the selected dates. Please choose different dates or another room.",
+            });
+          }
+
+          result = await client.query(
+            `INSERT INTO bookings (type, guest_name, guest_email, contact, notes, room_id, room_name, check_in, check_out, pax)
+             VALUES ('room', $1, $2, $3, $4, $5, $6, $7, $8, $9)
+             RETURNING ${bookingColumns}`,
+            [
+              booking.guestName.trim(),
+              booking.guestEmail.trim().toLowerCase(),
+              booking.contact.trim(),
+              booking.notes || "",
+              room.id,
+              room.name,
+              booking.checkIn,
+              booking.checkOut,
+              Number(booking.pax) || 1,
+            ],
+          );
+          const physicalRoomId = await assignPhysicalRoom(
+            client,
+            result.rows[0].id,
+            room.id,
+            booking.checkIn,
+            booking.checkOut,
+          );
+          if (!physicalRoomId) {
+            await client.query("ROLLBACK");
+            return response.status(409).json({
+              error:
+                "No physical room unit is available for those dates. Please choose another room or date range.",
+            });
+          }
+          await client.query("COMMIT");
+        } catch (error) {
+          await client.query("ROLLBACK");
+          throw error;
+        } finally {
+          client.release();
+        }
         return response.status(201).json(result.rows[0]);
       }
 
@@ -849,6 +1019,8 @@ export function registerApi(app, pool) {
         if (
           !booking.checkIn ||
           !booking.checkOut ||
+          !validDate(booking.checkIn) ||
+          !validDate(booking.checkOut) ||
           booking.checkOut <= booking.checkIn
         ) {
           return response
@@ -872,14 +1044,13 @@ export function registerApi(app, pool) {
               .status(400)
               .json({ error: "Choose an active room type" });
           }
-          const overlap = await client.query(
-            `SELECT count(*)::int AS count FROM bookings
-             WHERE room_id = $1 AND status IN ('Confirmed', 'CheckedIn')
-               AND daterange(check_in, check_out, '[)')
-                 && daterange($2::date, $3::date, '[)')`,
-            [room.id, booking.checkIn, booking.checkOut],
+          const booked = await getRoomBookingAvailability(
+            client,
+            room.id,
+            booking.checkIn,
+            booking.checkOut,
           );
-          if (overlap.rows[0].count >= room.inventory) {
+          if (booked >= room.inventory) {
             await client.query("ROLLBACK");
             return response
               .status(409)
@@ -900,6 +1071,20 @@ export function registerApi(app, pool) {
               Number(booking.pax) || 1,
             ],
           );
+          const physicalRoomId = await assignPhysicalRoom(
+            client,
+            result.rows[0].id,
+            room.id,
+            booking.checkIn,
+            booking.checkOut,
+          );
+          if (!physicalRoomId) {
+            await client.query("ROLLBACK");
+            return response.status(409).json({
+              error: "No physical room unit is available for those dates.",
+            });
+          }
+          result.rows[0].physicalRoomId = physicalRoomId;
           await client.query("COMMIT");
         } catch (error) {
           await client.query("ROLLBACK");
@@ -978,7 +1163,12 @@ export function registerApi(app, pool) {
           return response.status(404).json({ error: "Booking not found" });
         }
 
-        if (status === "Confirmed" && current.type === "room") {
+        const bookingReservesRoom = [
+          "Pending",
+          "Confirmed",
+          "CheckedIn",
+        ].includes(status);
+        if (bookingReservesRoom && current.type === "room") {
           const roomResult = await client.query(
             "SELECT inventory, active FROM rooms WHERE id = $1 FOR UPDATE",
             [current.room_id],
@@ -992,13 +1182,14 @@ export function registerApi(app, pool) {
               });
           }
           const inventory = roomResult.rows[0]?.inventory || 0;
-          const overlap = await client.query(
-            `SELECT count(*)::int AS count FROM bookings
-           WHERE room_id = $1 AND id <> $2 AND status IN ('Confirmed', 'CheckedIn')
-             AND daterange(check_in, check_out, '[)') && daterange($3::date, $4::date, '[)')`,
-            [current.room_id, current.id, current.check_in, current.check_out],
+          const booked = await getRoomBookingAvailability(
+            client,
+            current.room_id,
+            current.check_in,
+            current.check_out,
+            current.id,
           );
-          if (overlap.rows[0].count >= inventory) {
+          if (booked >= inventory) {
             await client.query("ROLLBACK");
             return response
               .status(409)
@@ -1006,11 +1197,69 @@ export function registerApi(app, pool) {
           }
         }
 
+        const bookingIsActive = ["Confirmed", "CheckedIn"].includes(status);
+        let physicalRoomId = current.physical_room_id;
+        if (
+          bookingReservesRoom &&
+          current.type === "room" &&
+          !current.physical_room_id
+        ) {
+          physicalRoomId = await assignPhysicalRoom(
+            client,
+            current.id,
+            current.room_id,
+            current.check_in,
+            current.check_out,
+          );
+          if (!physicalRoomId) {
+            await client.query("ROLLBACK");
+            return response.status(409).json({
+              error: "No physical room unit is available for those dates.",
+            });
+          }
+        }
+
         const result = await client.query(
-          `UPDATE bookings SET status = $1
-           WHERE id = $2 RETURNING ${bookingColumns}`,
-          [status, request.params.id],
+          `UPDATE bookings
+           SET status = $1,
+               physical_room_id = CASE
+                 WHEN $2::boolean THEN physical_room_id
+                 ELSE NULL
+               END
+           WHERE id = $3 RETURNING ${bookingColumns}`,
+          [status, bookingReservesRoom, request.params.id],
         );
+        if (bookingIsActive && current.type === "room" && physicalRoomId) {
+          await client.query(
+            `UPDATE physical_rooms SET status = 'Occupied', last_updated = now()
+             WHERE id = $1 AND EXISTS (
+               SELECT 1 FROM bookings
+               WHERE id = $2 AND status IN ('Confirmed', 'CheckedIn')
+                 AND check_in <= CURRENT_DATE AND check_out > CURRENT_DATE
+             )`,
+            [physicalRoomId, current.id],
+          );
+        }
+        if (!bookingIsActive && current.physical_room_id) {
+          await client.query(
+            `UPDATE physical_rooms AS physical
+             SET status = CASE
+               WHEN EXISTS (
+                 SELECT 1 FROM bookings AS linked
+                 WHERE linked.physical_room_id = physical.id
+                   AND linked.status IN ('Confirmed', 'CheckedIn')
+                   AND linked.check_in <= CURRENT_DATE
+                   AND linked.check_out > CURRENT_DATE
+               ) THEN 'Occupied'
+               WHEN $2 = 'Completed' AND $3::date <= CURRENT_DATE
+                 THEN 'Needs Cleaning'
+               ELSE 'Ready'
+             END,
+             last_updated = now()
+             WHERE physical.id = $1`,
+            [current.physical_room_id, status, current.check_in],
+          );
+        }
         await client.query("COMMIT");
 
         let emailDelivery = null;
@@ -1074,7 +1323,22 @@ export function registerApi(app, pool) {
              count(*) FILTER (WHERE status = 'Ready')::int AS ready,
              count(*) FILTER (WHERE status = 'Occupied')::int AS occupied,
              count(*) FILTER (WHERE status = 'Needs Cleaning')::int AS needs_cleaning
-           FROM physical_rooms WHERE active = true`,
+           FROM (
+             SELECT physical.id,
+               CASE
+                 WHEN EXISTS (
+                   SELECT 1 FROM bookings
+                   WHERE physical_room_id = physical.id
+                     AND status IN ('Confirmed', 'CheckedIn')
+                     AND check_in <= CURRENT_DATE
+                     AND check_out > CURRENT_DATE
+                 ) THEN 'Occupied'
+                 WHEN physical.status = 'Occupied' THEN 'Ready'
+                 ELSE physical.status
+               END AS status
+             FROM physical_rooms AS physical
+             WHERE physical.active = true
+           ) AS current_room_status`,
         ),
       ]);
       response.json({
@@ -1118,16 +1382,55 @@ export function registerApi(app, pool) {
     "/admin/room-status",
     requireAdmin,
     asyncRoute(async (_request, response) => {
-      const result = await pool.query(
+      const [rooms, unassignedBookings] = await Promise.all([
+        pool.query(
         `SELECT physical.id, physical.room_id AS "roomId",
            physical.unit_number AS "unitNumber", physical.room_label AS "roomLabel",
-           physical.status, physical.last_updated AS "lastUpdated", room.name AS "roomType"
+           CASE
+             WHEN EXISTS (
+               SELECT 1 FROM bookings AS active_stay
+               WHERE active_stay.physical_room_id = physical.id
+                 AND active_stay.status IN ('Confirmed', 'CheckedIn')
+                 AND active_stay.check_in <= CURRENT_DATE
+                 AND active_stay.check_out > CURRENT_DATE
+             ) THEN 'Occupied'
+             WHEN physical.status = 'Occupied' THEN 'Ready'
+             ELSE physical.status
+           END AS status,
+           physical.last_updated AS "lastUpdated", room.name AS "roomType",
+           COALESCE((
+             SELECT json_agg(json_build_object(
+               'guestName', booking.guest_name,
+               'checkIn', to_char(booking.check_in, 'YYYY-MM-DD'),
+               'checkOut', to_char(booking.check_out, 'YYYY-MM-DD'),
+               'status', booking.status
+             ) ORDER BY booking.check_in, booking.id)
+             FROM bookings AS booking
+             WHERE booking.physical_room_id = physical.id
+               AND booking.status IN ('Pending', 'Confirmed', 'CheckedIn')
+           ), '[]'::json) AS reservations
          FROM physical_rooms AS physical
          JOIN rooms AS room ON room.id = physical.room_id
          WHERE physical.active = true
          ORDER BY room.sort_order, physical.unit_number`,
-      );
-      response.json(result.rows);
+        ),
+        pool.query(
+          `SELECT booking.id, booking.guest_name AS "guestName",
+             booking.room_name AS "roomType",
+             to_char(booking.check_in, 'YYYY-MM-DD') AS "checkIn",
+             to_char(booking.check_out, 'YYYY-MM-DD') AS "checkOut",
+             booking.status
+           FROM bookings AS booking
+           WHERE booking.type = 'room'
+             AND booking.status IN ('Pending', 'Confirmed', 'CheckedIn')
+             AND booking.physical_room_id IS NULL
+           ORDER BY booking.check_in, booking.id`,
+        ),
+      ]);
+      response.json({
+        rooms: rooms.rows,
+        unassignedBookings: unassignedBookings.rows,
+      });
     }),
   );
 
@@ -1158,14 +1461,61 @@ export function registerApi(app, pool) {
       const allowed = new Set(["Ready", "Occupied", "Needs Cleaning"]);
       if (!allowed.has(request.body.status))
         return response.status(400).json({ error: "Invalid room status" });
-      const result = await pool.query(
-        `UPDATE physical_rooms SET status = $1, last_updated = now()
-       WHERE id = $2 RETURNING id, room_label AS \"roomLabel\", status, last_updated AS \"lastUpdated\"`,
-        [request.body.status, request.params.id],
-      );
-      if (!result.rowCount)
-        return response.status(404).json({ error: "Room not found" });
-      response.json(result.rows[0]);
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const room = await client.query(
+          "SELECT id FROM physical_rooms WHERE id = $1 FOR UPDATE",
+          [request.params.id],
+        );
+        if (!room.rowCount) {
+          await client.query("ROLLBACK");
+          return response.status(404).json({ error: "Room not found" });
+        }
+        const activeBooking = await client.query(
+          `SELECT EXISTS (
+             SELECT 1 FROM bookings
+             WHERE physical_room_id = $1
+               AND status IN ('Confirmed', 'CheckedIn')
+               AND check_in <= CURRENT_DATE
+               AND check_out > CURRENT_DATE
+           ) AS exists`,
+          [request.params.id],
+        );
+        if (
+          activeBooking.rows[0].exists &&
+          request.body.status !== "Occupied"
+        ) {
+          await client.query("ROLLBACK");
+          return response.status(409).json({
+            error:
+              "This room is assigned to an active booking. Update the booking status before changing its room status.",
+          });
+        }
+        if (
+          !activeBooking.rows[0].exists &&
+          request.body.status === "Occupied"
+        ) {
+          await client.query("ROLLBACK");
+          return response.status(409).json({
+            error: "Occupied status is set automatically for active stays.",
+          });
+        }
+        const result = await client.query(
+          `UPDATE physical_rooms SET status = $1, last_updated = now()
+           WHERE id = $2
+           RETURNING id, room_label AS "roomLabel", status,
+             last_updated AS "lastUpdated"`,
+          [request.body.status, request.params.id],
+        );
+        await client.query("COMMIT");
+        response.json(result.rows[0]);
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
     }),
   );
 

@@ -420,6 +420,21 @@ tr:hover {
 .status-card h3 {
   margin: 0 0 15px 0;
 }
+.status-card h4 {
+  margin: 18px 0 8px;
+}
+.room-reservations {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.room-reservations li + li {
+  margin-top: 6px;
+}
+.status-unassigned {
+  grid-column: 1 / -1;
+}
 
 .status-Occupied {
   border-left-color: var(--admin-danger);

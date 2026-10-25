@@ -90,6 +90,13 @@ ALTER TABLE physical_rooms
 CREATE UNIQUE INDEX IF NOT EXISTS physical_rooms_room_unit_unique
   ON physical_rooms (room_id, unit_number);
 
+ALTER TABLE bookings
+  ADD COLUMN IF NOT EXISTS physical_room_id text
+  REFERENCES physical_rooms(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS bookings_physical_room_id_idx
+  ON bookings (physical_room_id)
+  WHERE physical_room_id IS NOT NULL;
+
 CREATE TABLE IF NOT EXISTS admins (
   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   email text NOT NULL UNIQUE,

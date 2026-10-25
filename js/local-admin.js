@@ -243,7 +243,7 @@ function renderBookingDetail(data) {
 
   const details =
     data.type === "room"
-      ? `<p><strong>Type:</strong> Room Booking</p><p><strong>Room:</strong> ${escapeHTML(data.roomType)}</p><p><strong>Check-in:</strong> ${escapeHTML(data.checkIn)}</p><p><strong>Check-out:</strong> ${escapeHTML(data.checkOut)}</p><p><strong>Pax:</strong> ${escapeHTML(data.pax || "N/A")}</p>`
+      ? `<p><strong>Type:</strong> Room Booking</p><p><strong>Room:</strong> ${escapeHTML(data.roomType)}</p><p><strong>Assigned unit:</strong> ${escapeHTML(data.physicalRoomId || "Assigned when confirmed")}</p><p><strong>Check-in:</strong> ${escapeHTML(data.checkIn)}</p><p><strong>Check-out:</strong> ${escapeHTML(data.checkOut)}</p><p><strong>Pax:</strong> ${escapeHTML(data.pax || "N/A")}</p>`
       : `<p><strong>Type:</strong> Event Booking</p><p><strong>Event:</strong> ${escapeHTML(data.eventType)}</p><p><strong>Date:</strong> ${escapeHTML(data.eventDate)}</p><p><strong>Time:</strong> ${escapeHTML(data.timeBlock || "N/A")}</p><p><strong>Pax:</strong> ${escapeHTML(data.guestCount || "N/A")}</p>`;
   document.getElementById("detail-info").innerHTML =
     `${details}<p><strong>Status:</strong> <span class="badge ${getBadgeClass(data.status)}">${escapeHTML(data.status)}</span></p>`;
@@ -377,17 +377,19 @@ async function updateBooking(changes) {
 async function loadRoomStatus() {
   const grid = document.getElementById("status-grid");
   try {
-    const rooms = await apiRequest("/api/admin/room-status");
-    if (!rooms.length) {
+    const result = await apiRequest("/api/admin/room-status");
+    if (!result.rooms.length) {
       grid.textContent = "No physical rooms are configured.";
       return;
     }
     grid.replaceChildren();
-    rooms.forEach((room) => {
+    result.rooms.forEach((room) => {
       const card = document.createElement("div");
       card.className = `status-card status-${room.status.replaceAll(" ", "")}`;
       const heading = document.createElement("h3");
       heading.textContent = room.roomLabel;
+      const statusLabel = document.createElement("p");
+      statusLabel.textContent = `Current status: ${room.status}`;
       const select = document.createElement("select");
       select.style.width = "100%";
       select.style.padding = "8px";
@@ -396,6 +398,7 @@ async function loadRoomStatus() {
         option.value = status;
         option.textContent = status;
         option.selected = room.status === status;
+        if (status === "Occupied") option.disabled = true;
         select.appendChild(option);
       });
       select.addEventListener("change", async () => {
@@ -415,9 +418,55 @@ async function loadRoomStatus() {
       const updated = document.createElement("div");
       updated.style.cssText = "font-size:0.8rem; margin-top:10px; color:#666;";
       updated.textContent = `Updated: ${formatDate(room.lastUpdated)}`;
-      card.append(heading, select, updated);
+      const reservationHeading = document.createElement("h4");
+      reservationHeading.textContent = "Booked dates";
+      const reservations = document.createElement("ul");
+      reservations.className = "room-reservations";
+      if (!room.reservations.length) {
+        const empty = document.createElement("li");
+        empty.textContent = "No pending or confirmed stays.";
+        reservations.appendChild(empty);
+      } else {
+        room.reservations.forEach((reservation) => {
+          const item = document.createElement("li");
+          item.textContent =
+            `${formatDate(reservation.checkIn)} - ${formatDate(reservation.checkOut)} · ` +
+            `${reservation.guestName} (${reservation.status})`;
+          reservations.appendChild(item);
+        });
+      }
+      card.append(
+        heading,
+        statusLabel,
+        select,
+        reservationHeading,
+        reservations,
+        updated,
+      );
       grid.appendChild(card);
     });
+
+    if (result.unassignedBookings.length) {
+      const card = document.createElement("section");
+      card.className = "status-card status-NeedsCleaning status-unassigned";
+      const heading = document.createElement("h3");
+      heading.textContent = "Bookings without an assigned unit";
+      const description = document.createElement("p");
+      description.textContent =
+        "These bookings need staff review because no physical unit could be assigned for their dates.";
+      const reservations = document.createElement("ul");
+      reservations.className = "room-reservations";
+      result.unassignedBookings.forEach((reservation) => {
+        const item = document.createElement("li");
+        item.textContent =
+          `${reservation.roomType}: ${formatDate(reservation.checkIn)} - ` +
+          `${formatDate(reservation.checkOut)} · ${reservation.guestName} ` +
+          `(${reservation.status})`;
+        reservations.appendChild(item);
+      });
+      card.append(heading, description, reservations);
+      grid.appendChild(card);
+    }
   } catch (error) {
     grid.textContent = error.message;
   }

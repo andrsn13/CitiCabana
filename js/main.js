@@ -283,6 +283,7 @@ function openBookingModal(tab = "room", prefillRoom = null) {
     select.value = prefillRoom;
     calculateOrderSummary();
   }
+  if (tab === "room") checkRoomAvailability();
 }
 
 function openGalleryModal() {
