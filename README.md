@@ -38,6 +38,7 @@ The API creates its tables and seeds default site content, rooms, gallery entrie
 ## Local data
 
 - PostgreSQL stores website content, rooms, gallery entries, admin password hashes, room status, and bookings.
+- To add 120 synthetic bookings for local testing, start the server once so it creates the schema and default rooms, then run `seed-demo-bookings.sql` against the same database configured in `.env`. From PowerShell in the project folder, use `psql -U postgres -d citicabana -f .\seed-demo-bookings.sql`, or open the file in pgAdmin's Query Tool. The script uses reserved `example.com` email addresses and can be rerun without duplicating its sample bookings.
 - `.env` stores local database and optional SMTP credentials and is not committed.
 - CMS image uploads are stored on disk under `server/uploads/` and are not committed.
 - Room types can be added, edited, archived, and restored in the CMS. Inventory reductions are blocked when affected units are not Ready or confirmed bookings would exceed the new quantity. Additional per-room photos are managed from the room card and appear in the Villa carousel.
