@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (path.endsWith("bookings.html")) initializeBookings();
   if (path.endsWith("booking-detail.html")) initializeBookingDetail();
   if (path.endsWith("room-status.html")) loadRoomStatus();
+  if (path.endsWith("room-bookings.html")) loadRoomBookings();
   if (path.endsWith("reports.html")) initializeReports();
 });
 
@@ -418,29 +419,29 @@ async function loadRoomStatus() {
       const updated = document.createElement("div");
       updated.style.cssText = "font-size:0.8rem; margin-top:10px; color:#666;";
       updated.textContent = `Updated: ${formatDate(room.lastUpdated)}`;
-      const reservationHeading = document.createElement("h4");
-      reservationHeading.textContent = "Booked dates";
-      const reservations = document.createElement("ul");
-      reservations.className = "room-reservations";
-      if (!room.reservations.length) {
-        const empty = document.createElement("li");
-        empty.textContent = "No pending or confirmed stays.";
-        reservations.appendChild(empty);
+      const recentBooking = document.createElement("p");
+      recentBooking.className = "room-recent-booking";
+      if (room.reservations.length) {
+        const latest = room.reservations[0];
+        recentBooking.textContent =
+          `Most recent: ${latest.guestName} · ${formatDate(latest.checkIn)} - ` +
+          `${formatDate(latest.checkOut)} (${latest.status})`;
       } else {
-        room.reservations.forEach((reservation) => {
-          const item = document.createElement("li");
-          item.textContent =
-            `${formatDate(reservation.checkIn)} - ${formatDate(reservation.checkOut)} · ` +
-            `${reservation.guestName} (${reservation.status})`;
-          reservations.appendChild(item);
-        });
+        recentBooking.textContent = "No booking history.";
       }
+      const bookingsLink = document.createElement("a");
+      bookingsLink.className = "btn btn-outline room-bookings-link";
+      bookingsLink.href =
+        `room-bookings.html?roomId=${encodeURIComponent(room.id)}`;
+      bookingsLink.target = "_blank";
+      bookingsLink.rel = "noopener noreferrer";
+      bookingsLink.textContent = `View all bookings (${room.reservations.length})`;
       card.append(
         heading,
         statusLabel,
         select,
-        reservationHeading,
-        reservations,
+        recentBooking,
+        bookingsLink,
         updated,
       );
       grid.appendChild(card);
@@ -469,6 +470,68 @@ async function loadRoomStatus() {
     }
   } catch (error) {
     grid.textContent = error.message;
+  }
+}
+
+async function loadRoomBookings() {
+  const roomId = new URLSearchParams(window.location.search).get("roomId");
+  const title = document.getElementById("room-bookings-title");
+  const content = document.getElementById("room-bookings-content");
+  if (!roomId) {
+    content.textContent = "Choose a room from the Room Status Board.";
+    return;
+  }
+
+  try {
+    const result = await apiRequest("/api/admin/room-status");
+    const room = result.rooms.find((candidate) => candidate.id === roomId);
+    if (!room) {
+      content.textContent = "Room unit not found.";
+      return;
+    }
+
+    title.textContent = `${room.roomLabel} - Booking History`;
+    content.replaceChildren();
+    if (!room.reservations.length) {
+      content.textContent = "No bookings have been recorded for this unit.";
+      return;
+    }
+
+    const table = document.createElement("table");
+    table.className = "room-booking-table";
+    const thead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+    ["Guest", "Check-in", "Check-out", "Status", "Booking created"].forEach(
+      (label) => {
+        const th = document.createElement("th");
+        th.textContent = label;
+        headerRow.appendChild(th);
+      },
+    );
+    thead.appendChild(headerRow);
+    const tbody = document.createElement("tbody");
+    room.reservations.forEach((reservation) => {
+      const row = document.createElement("tr");
+      const guest = document.createElement("td");
+      guest.textContent = reservation.guestName;
+      const checkIn = document.createElement("td");
+      checkIn.textContent = formatDate(reservation.checkIn);
+      const checkOut = document.createElement("td");
+      checkOut.textContent = formatDate(reservation.checkOut);
+      const status = document.createElement("td");
+      const badge = document.createElement("span");
+      badge.className = `badge ${getBadgeClass(reservation.status)}`;
+      badge.textContent = reservation.status;
+      status.appendChild(badge);
+      const created = document.createElement("td");
+      created.textContent = formatDate(reservation.createdAt);
+      row.append(guest, checkIn, checkOut, status, created);
+      tbody.appendChild(row);
+    });
+    table.append(thead, tbody);
+    content.appendChild(table);
+  } catch (error) {
+    content.textContent = error.message;
   }
 }
 

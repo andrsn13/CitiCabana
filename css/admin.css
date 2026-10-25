@@ -432,6 +432,30 @@ tr:hover {
 .room-reservations li + li {
   margin-top: 6px;
 }
+.room-recent-booking {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  min-height: 2.7em;
+}
+.room-bookings-link {
+  display: inline-block;
+  text-align: center;
+  text-decoration: none;
+}
+.room-booking-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+.room-booking-table th,
+.room-booking-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--admin-border);
+  text-align: left;
+}
+.room-booking-table th {
+  background: #f7f7f7;
+}
 .status-unassigned {
   grid-column: 1 / -1;
 }

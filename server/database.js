@@ -188,10 +188,13 @@ async function syncRoomBookingAssignments(pool) {
     `SELECT id, room_id, check_in, check_out, status
      FROM bookings
      WHERE type = 'room'
-       AND status IN ('Pending', 'Confirmed', 'CheckedIn')
        AND physical_room_id IS NULL
        AND room_id IS NOT NULL
-     ORDER BY CASE WHEN status = 'Pending' THEN 1 ELSE 0 END,
+     ORDER BY CASE
+         WHEN status IN ('Pending', 'Confirmed', 'CheckedIn') THEN 0
+         ELSE 1
+       END,
+       CASE WHEN status = 'Pending' THEN 1 ELSE 0 END,
        check_in, id`,
   );
   let unassigned = 0;
@@ -205,28 +208,42 @@ async function syncRoomBookingAssignments(pool) {
          FROM physical_rooms AS physical
          WHERE physical.room_id = $1
            AND physical.active = true
-           AND physical.status <> 'Needs Cleaning'
            AND (
-             physical.status = 'Ready'
-             OR EXISTS (
-               SELECT 1 FROM bookings AS linked
-               WHERE linked.physical_room_id = physical.id
-                 AND linked.status IN ('Pending', 'Confirmed', 'CheckedIn')
+             $5::boolean = false
+             OR (
+               physical.status <> 'Needs Cleaning'
+               AND (
+                 physical.status = 'Ready'
+                 OR EXISTS (
+                   SELECT 1 FROM bookings AS linked
+                   WHERE linked.physical_room_id = physical.id
+                     AND linked.status IN ('Pending', 'Confirmed', 'CheckedIn')
+                 )
+               )
              )
            )
-           AND NOT EXISTS (
-             SELECT 1 FROM bookings AS overlapping
-             WHERE overlapping.physical_room_id = physical.id
-               AND overlapping.id <> $2
-               AND overlapping.status IN ('Pending', 'Confirmed', 'CheckedIn')
-               AND daterange(overlapping.check_in, overlapping.check_out, '[)')
-                 && daterange($3::date, $4::date, '[)')
+           AND (
+             $5::boolean = false
+             OR NOT EXISTS (
+               SELECT 1 FROM bookings AS overlapping
+               WHERE overlapping.physical_room_id = physical.id
+                 AND overlapping.id <> $2
+                 AND overlapping.status IN ('Pending', 'Confirmed', 'CheckedIn')
+                 AND daterange(overlapping.check_in, overlapping.check_out, '[)')
+                   && daterange($3::date, $4::date, '[)')
+             )
            )
          ORDER BY CASE WHEN physical.status = 'Ready' THEN 0 ELSE 1 END,
            physical.unit_number
          FOR UPDATE OF physical SKIP LOCKED
          LIMIT 1`,
-        [booking.room_id, booking.id, booking.check_in, booking.check_out],
+        [
+          booking.room_id,
+          booking.id,
+          booking.check_in,
+          booking.check_out,
+          ["Pending", "Confirmed", "CheckedIn"].includes(booking.status),
+        ],
       );
       const physicalRoomId = result.rows[0]?.id;
       if (!physicalRoomId) {

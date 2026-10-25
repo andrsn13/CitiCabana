@@ -1221,13 +1221,9 @@ export function registerApi(app, pool) {
 
         const result = await client.query(
           `UPDATE bookings
-           SET status = $1,
-               physical_room_id = CASE
-                 WHEN $2::boolean THEN physical_room_id
-                 ELSE NULL
-               END
-           WHERE id = $3 RETURNING ${bookingColumns}`,
-          [status, bookingReservesRoom, request.params.id],
+           SET status = $1
+           WHERE id = $2 RETURNING ${bookingColumns}`,
+          [status, request.params.id],
         );
         if (bookingIsActive && current.type === "room" && physicalRoomId) {
           await client.query(
@@ -1400,14 +1396,15 @@ export function registerApi(app, pool) {
            physical.last_updated AS "lastUpdated", room.name AS "roomType",
            COALESCE((
              SELECT json_agg(json_build_object(
+               'id', booking.id,
                'guestName', booking.guest_name,
                'checkIn', to_char(booking.check_in, 'YYYY-MM-DD'),
                'checkOut', to_char(booking.check_out, 'YYYY-MM-DD'),
-               'status', booking.status
-             ) ORDER BY booking.check_in, booking.id)
+               'status', booking.status,
+               'createdAt', booking.created_at
+             ) ORDER BY booking.created_at DESC, booking.id DESC)
              FROM bookings AS booking
              WHERE booking.physical_room_id = physical.id
-               AND booking.status IN ('Pending', 'Confirmed', 'CheckedIn')
            ), '[]'::json) AS reservations
          FROM physical_rooms AS physical
          JOIN rooms AS room ON room.id = physical.room_id

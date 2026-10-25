@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Room Booking History - Citi Cabana Admin</title>
+    <link rel="stylesheet" href="../css/admin.css" />
+  </head>
+  <body>
+    <div class="admin-layout">
+      <aside class="admin-sidebar">
+        <div class="admin-brand">Citi Cabana</div>
+        <ul class="admin-nav">
+          <li><a href="dashboard.html">Dashboard</a></li>
+          <li><a href="bookings.html">Bookings</a></li>
+          <li><a href="room-status.html" class="active">Room Status</a></li>
+          <li><a href="reports.html">Reports</a></li>
+          <li
+            style="
+              margin-top: 15px;
+              font-size: 0.8em;
+              text-transform: uppercase;
+              color: #888;
+              padding-left: 15px;
+            "
+          >
+            Content
+          </li>
+          <li><a href="cms.html">Manage Website</a></li>
+          <li style="margin-top: 30px">
+            <a href="#" onclick="logout()">Logout</a>
+          </li>
+        </ul>
+      </aside>
+
+      <main class="admin-content">
+        <div class="page-header">
+          <h1 id="room-bookings-title">Room Booking History</h1>
+          <a class="btn btn-outline" href="room-status.html">Back to Room Status</a>
+        </div>
+        <p>Bookings are listed with the newest booking record first.</p>
+        <div id="room-bookings-content" class="card">
+          Loading room bookings...
+        </div>
+      </main>
+    </div>
+    <script src="../js/local-auth.js"></script>
+    <script src="../js/local-admin.js"></script>
+  </body>
+</html>
