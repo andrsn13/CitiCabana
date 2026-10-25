@@ -1717,14 +1717,27 @@ export function registerApi(app, pool) {
             error: "Enter a valid date range with start on or before end",
           });
       }
-      const result = await pool.query(
-        `SELECT count(*)::int AS total_bookings,
-       count(*) FILTER (WHERE type = 'room')::int AS room_bookings,
-       count(*) FILTER (WHERE type = 'event')::int AS event_bookings
-       FROM bookings WHERE status = 'Confirmed' AND created_at::date BETWEEN $1::date AND $2::date`,
-        [start, end],
-      );
-      response.json(result.rows[0]);
+      const [summary, bookings] = await Promise.all([
+        pool.query(
+          `SELECT count(*)::int AS total_bookings,
+         count(*) FILTER (WHERE type = 'room')::int AS room_bookings,
+         count(*) FILTER (WHERE type = 'event')::int AS event_bookings,
+         count(*) FILTER (WHERE status = 'Pending')::int AS pending_bookings,
+         count(*) FILTER (WHERE status = 'Confirmed')::int AS confirmed_bookings,
+         count(*) FILTER (WHERE status = 'CheckedIn')::int AS checked_in_bookings,
+         count(*) FILTER (WHERE status = 'Completed')::int AS completed_bookings,
+         count(*) FILTER (WHERE status = 'Cancelled')::int AS cancelled_bookings
+         FROM bookings WHERE created_at::date BETWEEN $1::date AND $2::date`,
+          [start, end],
+        ),
+        pool.query(
+          `SELECT ${bookingColumns} FROM bookings
+           WHERE created_at::date BETWEEN $1::date AND $2::date
+           ORDER BY created_at DESC, id DESC`,
+          [start, end],
+        ),
+      ]);
+      response.json({ ...summary.rows[0], bookings: bookings.rows });
     }),
   );
 

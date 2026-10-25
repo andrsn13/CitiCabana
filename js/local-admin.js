@@ -510,6 +510,17 @@ function initializeReports() {
           report.room_bookings;
         document.getElementById("report-event-bookings").textContent =
           report.event_bookings;
+        document.getElementById("report-pending-bookings").textContent =
+          report.pending_bookings;
+        document.getElementById("report-confirmed-bookings").textContent =
+          report.confirmed_bookings;
+        document.getElementById("report-checked-in-bookings").textContent =
+          report.checked_in_bookings;
+        document.getElementById("report-completed-bookings").textContent =
+          report.completed_bookings;
+        document.getElementById("report-cancelled-bookings").textContent =
+          report.cancelled_bookings;
+        renderReportBookings(report.bookings);
       } catch (error) {
         alert(error.message);
       }
@@ -518,4 +529,38 @@ function initializeReports() {
   document.getElementById("report-export").addEventListener("click", () => {
     window.print();
   });
+}
+
+function renderReportBookings(bookings) {
+  const tbody = document.getElementById("report-bookings-tbody");
+  if (!bookings.length) {
+    tbody.innerHTML =
+      '<tr><td colspan="7" class="text-center">No bookings found for this date range.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = bookings
+    .map((booking) => {
+      const details =
+        booking.type === "room"
+          ? `Room: ${booking.roomType}`
+          : `Event: ${booking.eventType}`;
+      const dates =
+        booking.type === "room"
+          ? `${booking.checkIn} to ${booking.checkOut}`
+          : booking.eventDate;
+      const guestCount =
+        booking.type === "room" ? booking.pax : booking.guestCount;
+
+      return `<tr>
+        <td>${escapeHTML(formatDate(booking.createdAt))}</td>
+        <td><strong>${escapeHTML(booking.guestName)}</strong><br><small>${escapeHTML(booking.guestEmail || booking.contact)}</small></td>
+        <td>${escapeHTML(details)}</td>
+        <td>${escapeHTML(dates)}</td>
+        <td>${escapeHTML(guestCount ?? "N/A")}</td>
+        <td><span class="badge ${getBadgeClass(booking.status)}">${escapeHTML(booking.status)}</span></td>
+        <td>${escapeHTML(booking.notes || "—")}</td>
+      </tr>`;
+    })
+    .join("");
 }

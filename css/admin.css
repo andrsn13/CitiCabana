@@ -1294,6 +1294,9 @@ tr:hover {
 .report-print-header {
   display: none;
 }
+.report-bookings-card {
+  grid-column: 1 / -1;
+}
 
 @media print {
   @page {
@@ -1320,6 +1323,24 @@ tr:hover {
   #report-results {
     display: grid !important;
     grid-template-columns: 1fr;
+  }
+  #report-results .card.report-bookings-card {
+    grid-column: 1 / -1;
+    break-inside: auto;
+  }
+  #report-results .report-bookings-card .table-responsive {
+    overflow: visible;
+  }
+  #report-results .report-bookings-card table {
+    font-size: 9pt;
+  }
+  #report-results .report-bookings-card th,
+  #report-results .report-bookings-card td {
+    padding: 6px;
+    overflow-wrap: anywhere;
+  }
+  #report-results .report-bookings-card tr {
+    break-inside: avoid;
   }
   #report-results .card {
     border: 1px solid #bbb;
