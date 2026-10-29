@@ -386,7 +386,13 @@
   async function runAction(booking, status, edit = false) {
     if (status === "View" || status === "Edit") {
       window.bookingDrawer.open(booking.id, edit || status === "Edit");
-      return;
+      return true;
+    }
+    if (
+      ["Confirmed", "Rejected"].includes(status) &&
+      !(await window.bookingDrawer.confirmAction(booking, status))
+    ) {
+      return false;
     }
     if (status === "CheckedIn" && booking.roomId) {
       try {
@@ -398,11 +404,11 @@
           room?.housekeepingStatus === "Dirty" &&
           !confirm("This room is Dirty. Check in anyway?")
         ) {
-          return;
+          return false;
         }
       } catch (error) {
         showToast(error.message);
-        return;
+        return false;
       }
     }
     const previous = {
@@ -430,6 +436,7 @@
       if (status === "Confirmed" && updated.emailDelivery?.sent === false) {
         showToast(`Booking confirmed. Email not sent: ${updated.emailDelivery.message}`, undo);
       }
+      return true;
     } catch (error) {
       if (
         error.details?.conflicts?.length ||
@@ -442,6 +449,7 @@
       } else {
         showToast(error.message);
       }
+      return false;
     }
   }
 
@@ -627,7 +635,7 @@
     }
   });
 
-  window.bookingsApp = { loadRoomTypes, reload };
+  window.bookingsApp = { loadRoomTypes, reload, runAction };
   reload();
   window.setInterval(() => {
     if (!document.hidden) reload();

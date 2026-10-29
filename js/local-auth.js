@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", async () => {
+  initializeAdminSidebar();
   const loginForm = document.getElementById("login-form");
 
   if (loginForm) {
@@ -21,6 +22,71 @@ document.addEventListener("DOMContentLoaded", async () => {
     window.location.replace("login.html");
   }
 });
+
+function initializeAdminSidebar() {
+  const sidebar = document.querySelector(".admin-sidebar");
+  const layout = sidebar?.closest(".admin-layout");
+  const brand = sidebar?.querySelector(".admin-brand");
+  const navigation = sidebar?.querySelector(".admin-nav");
+  if (!sidebar || !layout || !brand || !navigation) return;
+
+  const brandName = document.createElement("span");
+  brandName.className = "admin-brand-name";
+  brandName.textContent = brand.textContent.trim();
+  brand.replaceChildren(brandName);
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "admin-sidebar-toggle";
+  toggle.setAttribute("aria-controls", navigation.id || "admin-navigation");
+  navigation.id = navigation.id || "admin-navigation";
+  brand.appendChild(toggle);
+
+  const labels = new Map([
+    ["Dashboard", "D"],
+    ["Bookings", "B"],
+    ["Room Status", "RS"],
+    ["Reports", "R"],
+    ["Manage Website", "CMS"],
+    ["Logout", "↪"],
+  ]);
+  navigation.querySelectorAll("li").forEach((item) => {
+    const link = item.querySelector("a");
+    if (!link) {
+      item.classList.add("admin-nav-section");
+      return;
+    }
+
+    const label = link.textContent.trim();
+    const text = document.createElement("span");
+    text.className = "admin-nav-label";
+    text.textContent = label;
+    link.replaceChildren(text);
+    link.dataset.shortLabel = labels.get(label) || label.slice(0, 2).toUpperCase();
+    link.title = label;
+    link.setAttribute("aria-label", label);
+  });
+
+  function setCollapsed(collapsed, persist = true) {
+    layout.classList.toggle("sidebar-collapsed", collapsed);
+    toggle.textContent = collapsed ? "›" : "‹";
+    toggle.setAttribute("aria-expanded", String(!collapsed));
+    toggle.setAttribute(
+      "aria-label",
+      collapsed ? "Expand navigation" : "Collapse navigation",
+    );
+    toggle.title = collapsed ? "Expand navigation" : "Collapse navigation";
+    if (persist) {
+      localStorage.setItem("citicabana-admin-sidebar-collapsed", String(collapsed));
+    }
+  }
+
+  const savedState = localStorage.getItem("citicabana-admin-sidebar-collapsed");
+  setCollapsed(savedState === "true", false);
+  toggle.addEventListener("click", () => {
+    setCollapsed(!layout.classList.contains("sidebar-collapsed"));
+  });
+}
 
 async function initializeLoginPage(form) {
   const button = form.querySelector('button[type="submit"]');

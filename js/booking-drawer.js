@@ -6,6 +6,8 @@
   const title = document.getElementById("booking-drawer-title");
   let booking = null;
   let rooms = [];
+  let confirmationDialog;
+  let confirmationResolver;
 
   function element(tag, className = "", text) {
     const node = document.createElement(tag);
@@ -40,6 +42,77 @@
       (new Date(`${checkOut}T00:00:00Z`) - new Date(`${checkIn}T00:00:00Z`)) /
         86400000,
     );
+  }
+
+  function getConfirmationDialog() {
+    if (confirmationDialog) return confirmationDialog;
+
+    confirmationDialog = element("dialog", "room-status-dialog booking-confirmation-dialog");
+    const heading = element("div", "dialog-heading");
+    const headingText = element("h2");
+    headingText.id = "booking-confirmation-title";
+    const message = element("p");
+    message.id = "booking-confirmation-message";
+    const actions = element("div", "booking-drawer-actions");
+    const cancel = element("button", "btn btn-outline", "Go back");
+    cancel.type = "button";
+    cancel.autofocus = true;
+    cancel.addEventListener("click", () => confirmationDialog.close());
+    const proceed = element("button", "btn btn-primary");
+    proceed.type = "button";
+    proceed.addEventListener("click", () => {
+      confirmationResolver?.(true);
+      confirmationResolver = null;
+      confirmationDialog.close();
+    });
+    actions.append(cancel, proceed);
+    heading.appendChild(headingText);
+    confirmationDialog.setAttribute("aria-labelledby", headingText.id);
+    confirmationDialog.append(heading, message, actions);
+    confirmationDialog.addEventListener("click", (event) => {
+      if (event.target === confirmationDialog) confirmationDialog.close();
+    });
+    confirmationDialog.addEventListener("close", () => {
+      confirmationResolver?.(false);
+      confirmationResolver = null;
+    });
+    document.body.appendChild(confirmationDialog);
+    confirmationDialog.confirmationMessage = message;
+    confirmationDialog.proceedButton = proceed;
+    return confirmationDialog;
+  }
+
+  function confirmAction(targetBooking, status) {
+    const dialogNode = getConfirmationDialog();
+    const isRejecting = status === "Rejected";
+    const stay =
+      targetBooking.type === "event"
+        ? `${dateLabel(targetBooking.eventDate)} · ${targetBooking.eventType || "Event"}`
+        : `${dateLabel(targetBooking.checkIn)} to ${dateLabel(targetBooking.checkOut)}`;
+    const pastPending =
+      isRejecting &&
+      targetBooking.type === "room" &&
+      targetBooking.status === "Pending" &&
+      targetBooking.checkOut < propertyToday();
+
+    dialogNode.querySelector("#booking-confirmation-title").textContent = isRejecting
+      ? "Reject this booking?"
+      : "Confirm this booking?";
+    dialogNode.confirmationMessage.textContent = isRejecting
+      ? `Reject ${targetBooking.guestName || "this guest"}'s booking for ${stay}? It will stop holding inventory.${pastPending ? " Because the stay dates have passed, this rejection cannot be undone." : " You can undo this for a short time after rejecting."}`
+      : targetBooking.type === "room"
+        ? `Confirm ${targetBooking.guestName || "this guest"}'s booking for ${stay}? A room unit will be assigned if needed, and a confirmation email will be sent when an email address is available.`
+        : `Confirm ${targetBooking.guestName || "this guest"}'s event booking for ${stay}? A confirmation email will be sent when an email address is available.`;
+    dialogNode.proceedButton.textContent = isRejecting ? "Reject booking" : "Confirm booking";
+    dialogNode.proceedButton.className = isRejecting
+      ? "btn btn-danger"
+      : "btn btn-primary";
+
+    return new Promise((resolve) => {
+      confirmationResolver = resolve;
+      dialogNode.showModal();
+      dialogNode.querySelector(".btn-outline").focus();
+    });
   }
 
   function setError(message, conflicts = []) {
@@ -93,9 +166,9 @@
     };
     if (booking.status === "Pending") {
       if (booking.type !== "room" || booking.checkOut >= propertyToday()) {
-        addAction("Confirm", "btn btn-primary", () => update({ status: "Confirmed" }));
+        addAction("Confirm", "btn btn-primary", () => changeStatus("Confirmed"));
       }
-      addAction("Reject", "btn btn-danger", () => update({ status: "Rejected" }));
+      addAction("Reject", "btn btn-danger", () => changeStatus("Rejected"));
       addAction("Cancel", "btn btn-outline", () => update({ status: "Cancelled" }));
     } else if (booking.status === "Confirmed") {
       addAction("Check in", "btn btn-primary", () => checkIn());
@@ -203,9 +276,87 @@
       });
       dialog.close();
       await refreshLists();
+      return booking;
     } catch (error) {
       setError(error.message, error.details?.conflicts || []);
+      return null;
     }
+  }
+
+  async function changeStatus(status) {
+    if (window.bookingsApp?.runAction) {
+      const completed = await window.bookingsApp.runAction(booking, status);
+      if (completed) dialog.close();
+      return;
+    }
+
+    if (!(await confirmAction(booking, status))) return;
+    const previous = {
+      status: booking.status,
+      checkOut: booking.checkOut,
+      roomId: booking.roomId,
+    };
+    const updated = await update({ status });
+    if (status === "Rejected" && updated) {
+      const canUndo =
+        previous.status !== "Pending" ||
+        booking.type !== "room" ||
+        booking.checkOut >= propertyToday();
+      showUndoToast(booking, previous, updated, canUndo);
+    }
+  }
+
+  function showUndoToast(targetBooking, previous, updated, canUndo) {
+    document.querySelector(".booking-drawer-toast")?.remove();
+    const toast = element("div", "booking-toast booking-drawer-toast");
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+    const message = element(
+      "span",
+      "",
+      canUndo
+        ? "Booking rejected."
+        : "Booking rejected. Past-date pending rejections cannot be undone.",
+    );
+    const undo = canUndo ? element("button", "", "Undo") : null;
+    if (undo) undo.type = "button";
+    const dismiss = element("button", "", "×");
+    dismiss.type = "button";
+    dismiss.setAttribute("aria-label", "Dismiss");
+    const timeout = window.setTimeout(() => toast.remove(), 8000);
+    dismiss.addEventListener("click", () => {
+      window.clearTimeout(timeout);
+      toast.remove();
+    });
+    if (undo) {
+      undo.addEventListener("click", async () => {
+        undo.disabled = true;
+        try {
+          await apiRequest(
+            `/api/admin/bookings/${encodeURIComponent(targetBooking.id)}/undo`,
+            {
+              method: "POST",
+              body: JSON.stringify({
+                previousStatus: previous.status,
+                previousCheckOut: previous.checkOut,
+                previousRoomId: previous.roomId,
+                expectedUpdatedAt: updated.updatedAt,
+              }),
+            },
+          );
+          window.clearTimeout(timeout);
+          toast.remove();
+          await refreshLists();
+        } catch (error) {
+          message.textContent = error.message;
+          undo.remove();
+        }
+      });
+    }
+    toast.append(message);
+    if (undo) toast.appendChild(undo);
+    toast.appendChild(dismiss);
+    document.body.appendChild(toast);
   }
 
   async function refreshLists() {
@@ -240,5 +391,5 @@
     button.addEventListener("click", () => dialog.close());
   });
 
-  window.bookingDrawer = { open };
+  window.bookingDrawer = { confirmAction, open };
 })();

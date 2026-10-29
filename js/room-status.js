@@ -16,6 +16,7 @@
   let ignoreNextClick = false;
   let bookingDrag = null;
   let suppressBookingClick = false;
+  let latestLoadRequest = 0;
 
   function propertyToday() {
     const parts = new Intl.DateTimeFormat("en-US", {
@@ -51,6 +52,13 @@
       ...options,
       timeZone: "UTC",
     }).format(parseDate(value));
+  }
+
+  function updateWindowSummary() {
+    const summary = document.getElementById("chart-window-summary");
+    const lastNight = addDays(state.startDate, state.days - 1);
+    summary.textContent =
+      `Showing ${dateLabel(state.startDate)}–${dateLabel(lastNight)} · ${state.days} nights`;
   }
 
   function makeElement(tag, className, text) {
@@ -437,6 +445,7 @@
   }
 
   async function load() {
+    const requestId = ++latestLoadRequest;
     clearError();
     const query = new URLSearchParams({
       start: state.startDate || propertyToday(),
@@ -444,12 +453,14 @@
     });
     try {
       const result = await apiRequest(`/api/admin/room-status?${query}`);
+      if (requestId !== latestLoadRequest) return;
       state.rooms = result.rooms;
       state.unassignedBookings = result.unassignedBookings;
       state.startDate = result.startDate;
       state.days = result.days;
       document.getElementById("chart-start").value = state.startDate;
       document.getElementById("chart-window").value = String(state.days);
+      updateWindowSummary();
       renderTodayStrip(result.stats);
       render();
       if (result.unassignedBookings.length) {
@@ -458,6 +469,7 @@
         );
       }
     } catch (error) {
+      if (requestId !== latestLoadRequest) return;
       grid.replaceChildren(makeElement("p", "chart-message", error.message));
       showError(error.message);
     }
@@ -802,6 +814,7 @@
   });
   document.getElementById("chart-window").addEventListener("change", (event) => {
     state.days = Number(event.target.value);
+    document.getElementById("chart-scroll").scrollLeft = 0;
     load();
   });
   document.getElementById("status-refresh").addEventListener("click", load);

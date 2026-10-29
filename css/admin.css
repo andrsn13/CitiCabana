@@ -216,13 +216,19 @@ body {
 
 .admin-sidebar {
   width: 250px;
+  transition: width 180ms ease;
   background-color: var(--admin-sidebar);
   color: white;
   padding: 20px 0;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .admin-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 0 20px 20px;
   font-size: 1.5rem;
   font-weight: bold;
@@ -230,10 +236,40 @@ body {
   margin-bottom: 20px;
 }
 
+.admin-brand-name {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.admin-sidebar-toggle {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 28%);
+  border-radius: 5px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.admin-sidebar-toggle:hover,
+.admin-sidebar-toggle:focus-visible {
+  background: rgb(255 255 255 / 12%);
+}
+
 .admin-nav {
   list-style: none;
   padding: 0;
   margin: 0;
+}
+
+.admin-nav-label {
+  white-space: nowrap;
 }
 
 .admin-nav li a {
@@ -253,8 +289,41 @@ body {
 
 .admin-content {
   flex-grow: 1;
+  min-width: 0;
   padding: 30px;
   overflow-y: auto;
+}
+
+.admin-layout.sidebar-collapsed .admin-sidebar {
+  width: 76px;
+}
+
+.admin-layout.sidebar-collapsed .admin-brand {
+  justify-content: center;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.admin-layout.sidebar-collapsed .admin-brand-name,
+.admin-layout.sidebar-collapsed .admin-nav-label,
+.admin-layout.sidebar-collapsed .admin-nav-section {
+  display: none;
+}
+
+.admin-layout.sidebar-collapsed .admin-nav li a {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 8px;
+  font-size: 0;
+  text-align: center;
+}
+
+.admin-layout.sidebar-collapsed .admin-nav li a::before {
+  content: attr(data-short-label);
+  font-size: 0.85rem;
+  font-weight: 700;
 }
 
 /* Admin Components */
@@ -836,6 +905,12 @@ tr:hover {
   font-size: 0.9rem;
 }
 
+#chart-window-summary {
+  color: #606a72;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
 .chart-date-controls input,
 .chart-date-controls select,
 .status-form input,
@@ -1253,6 +1328,19 @@ tr:hover {
   }
   .admin-sidebar {
     width: 100%;
+  }
+  .admin-layout.sidebar-collapsed .admin-sidebar {
+    width: 100%;
+    padding: 12px 0;
+  }
+  .admin-layout.sidebar-collapsed .admin-brand {
+    justify-content: flex-end;
+    padding: 0 16px;
+    margin-bottom: 0;
+    border-bottom: 0;
+  }
+  .admin-layout.sidebar-collapsed .admin-nav {
+    display: none;
   }
 }
 
