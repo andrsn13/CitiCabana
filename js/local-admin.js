@@ -1,7 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
   const path = window.location.pathname;
   if (path.endsWith("dashboard.html")) loadDashboard();
-  if (path.endsWith("bookings.html")) initializeBookings();
   if (path.endsWith("booking-detail.html")) initializeBookingDetail();
   if (path.endsWith("room-status.html")) loadRoomStatus();
   if (path.endsWith("room-bookings.html")) loadRoomBookings();
@@ -22,7 +21,11 @@ async function apiRequest(url, options = {}) {
   }
   if (response.status === 204) return null;
   const result = await response.json();
-  if (!response.ok) throw new Error(result.error || "Request failed");
+  if (!response.ok) {
+    const error = new Error(result.error || "Request failed");
+    error.details = result;
+    throw error;
+  }
   return result;
 }
 
@@ -42,7 +45,10 @@ function escapeHTML(value) {
 
 function formatDate(value) {
   if (!value) return "N/A";
-  return new Date(value).toLocaleDateString();
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? new Date(`${value}T00:00:00`)
+    : new Date(value);
+  return date.toLocaleDateString();
 }
 
 function getBadgeClass(status) {
@@ -51,7 +57,9 @@ function getBadgeClass(status) {
       Pending: "badge-pending",
       Confirmed: "badge-confirmed",
       Cancelled: "badge-cancelled",
-      Completed: "badge-completed",
+      Rejected: "badge-rejected",
+      NoShow: "badge-cancelled",
+      CheckedOut: "badge-completed",
       CheckedIn: "badge-checkedin",
     }[status] || "badge-completed"
   );
@@ -139,7 +147,7 @@ function initializeBookings() {
       contact: "Walk-in/Phone",
     };
     if (type === "room") {
-      booking.roomType = document.getElementById("walkin-room-type").value;
+      booking.roomTypeId = document.getElementById("walkin-room-type").value;
       booking.checkIn = document.getElementById("walkin-checkin").value;
       booking.checkOut = document.getElementById("walkin-checkout").value;
       booking.pax = 1;
@@ -201,8 +209,9 @@ function renderBookings(bookings) {
 
 function toggleAddWalkin() {
   const container = document.getElementById("add-walkin-container");
-  container.style.display =
-    container.style.display === "none" ? "block" : "none";
+  const isOpening = container.style.display === "none";
+  container.style.display = isOpening ? "block" : "none";
+  if (isOpening) window.bookingsApp?.loadRoomTypes?.();
 }
 
 function toggleWalkinFields() {
@@ -244,7 +253,7 @@ function renderBookingDetail(data) {
 
   const details =
     data.type === "room"
-      ? `<p><strong>Type:</strong> Room Booking</p><p><strong>Room:</strong> ${escapeHTML(data.roomType)}</p><p><strong>Assigned unit:</strong> ${escapeHTML(data.physicalRoomId || "Assigned when confirmed")}</p><p><strong>Check-in:</strong> ${escapeHTML(data.checkIn)}</p><p><strong>Check-out:</strong> ${escapeHTML(data.checkOut)}</p><p><strong>Pax:</strong> ${escapeHTML(data.pax || "N/A")}</p>`
+    ? `<p><strong>Type:</strong> Room Booking</p><p><strong>Room:</strong> ${escapeHTML(data.roomType)}</p><p><strong>Assigned unit:</strong> ${escapeHTML(data.physicalRoomId || "Assigned when confirmed")}</p><p><strong>Check-in:</strong> ${escapeHTML(data.checkIn)}</p><p><strong>Check-out:</strong> ${escapeHTML(data.checkOut)}</p><p><strong>Source:</strong> ${escapeHTML(data.source)}</p><p><strong>Pax:</strong> ${escapeHTML(data.pax || "N/A")}</p>`
       : `<p><strong>Type:</strong> Event Booking</p><p><strong>Event:</strong> ${escapeHTML(data.eventType)}</p><p><strong>Date:</strong> ${escapeHTML(data.eventDate)}</p><p><strong>Time:</strong> ${escapeHTML(data.timeBlock || "N/A")}</p><p><strong>Pax:</strong> ${escapeHTML(data.guestCount || "N/A")}</p>`;
   document.getElementById("detail-info").innerHTML =
     `${details}<p><strong>Status:</strong> <span class="badge ${getBadgeClass(data.status)}">${escapeHTML(data.status)}</span></p>`;
@@ -258,7 +267,10 @@ function renderBookingDetail(data) {
       "btn btn-success",
       showConfirmPanel,
     );
-    addActionButton(actions, "Decline", "btn btn-danger", () =>
+    addActionButton(actions, "Reject", "btn btn-danger", () =>
+      updateStatus("Rejected"),
+    );
+    addActionButton(actions, "Cancel", "btn btn-outline", () =>
       updateStatus("Cancelled"),
     );
   } else if (data.status === "Confirmed") {
@@ -274,9 +286,12 @@ function renderBookingDetail(data) {
     addActionButton(actions, "Cancel Booking", "btn btn-danger", () =>
       updateStatus("Cancelled"),
     );
+    addActionButton(actions, "Mark No-show", "btn btn-outline", () =>
+      updateStatus("NoShow"),
+    );
   } else if (data.status === "CheckedIn") {
-    addActionButton(actions, "Mark Completed", "btn btn-primary", () =>
-      updateStatus("Completed"),
+    addActionButton(actions, "Check out", "btn btn-primary", () =>
+      updateStatus("CheckedOut"),
     );
   }
 }
@@ -376,101 +391,10 @@ async function updateBooking(changes) {
 }
 
 async function loadRoomStatus() {
-  const grid = document.getElementById("status-grid");
-  try {
-    const result = await apiRequest("/api/admin/room-status");
-    if (!result.rooms.length) {
-      grid.textContent = "No physical rooms are configured.";
-      return;
-    }
-    grid.replaceChildren();
-    result.rooms.forEach((room) => {
-      const card = document.createElement("div");
-      card.className = `status-card status-${room.status.replaceAll(" ", "")}`;
-      const heading = document.createElement("h3");
-      heading.textContent = room.roomLabel;
-      const statusLabel = document.createElement("p");
-      statusLabel.textContent = `Current status: ${room.status}`;
-      const select = document.createElement("select");
-      select.style.width = "100%";
-      select.style.padding = "8px";
-      ["Ready", "Occupied", "Needs Cleaning"].forEach((status) => {
-        const option = document.createElement("option");
-        option.value = status;
-        option.textContent = status;
-        option.selected = room.status === status;
-        if (status === "Occupied") option.disabled = true;
-        select.appendChild(option);
-      });
-      select.addEventListener("change", async () => {
-        try {
-          await apiRequest(
-            `/api/admin/room-status/${encodeURIComponent(room.id)}`,
-            {
-              method: "PATCH",
-              body: JSON.stringify({ status: select.value }),
-            },
-          );
-          await loadRoomStatus();
-        } catch (error) {
-          alert(error.message);
-        }
-      });
-      const updated = document.createElement("div");
-      updated.style.cssText = "font-size:0.8rem; margin-top:10px; color:#666;";
-      updated.textContent = `Updated: ${formatDate(room.lastUpdated)}`;
-      const recentBooking = document.createElement("p");
-      recentBooking.className = "room-recent-booking";
-      if (room.reservations.length) {
-        const latest = room.reservations[0];
-        recentBooking.textContent =
-          `Most recent: ${latest.guestName} · ${formatDate(latest.checkIn)} - ` +
-          `${formatDate(latest.checkOut)} (${latest.status})`;
-      } else {
-        recentBooking.textContent = "No booking history.";
-      }
-      const bookingsLink = document.createElement("a");
-      bookingsLink.className = "btn btn-outline room-bookings-link";
-      bookingsLink.href =
-        `room-bookings.html?roomId=${encodeURIComponent(room.id)}`;
-      bookingsLink.target = "_blank";
-      bookingsLink.rel = "noopener noreferrer";
-      bookingsLink.textContent = `View all bookings (${room.reservations.length})`;
-      card.append(
-        heading,
-        statusLabel,
-        select,
-        recentBooking,
-        bookingsLink,
-        updated,
-      );
-      grid.appendChild(card);
-    });
-
-    if (result.unassignedBookings.length) {
-      const card = document.createElement("section");
-      card.className = "status-card status-NeedsCleaning status-unassigned";
-      const heading = document.createElement("h3");
-      heading.textContent = "Bookings without an assigned unit";
-      const description = document.createElement("p");
-      description.textContent =
-        "These bookings need staff review because no physical unit could be assigned for their dates.";
-      const reservations = document.createElement("ul");
-      reservations.className = "room-reservations";
-      result.unassignedBookings.forEach((reservation) => {
-        const item = document.createElement("li");
-        item.textContent =
-          `${reservation.roomType}: ${formatDate(reservation.checkIn)} - ` +
-          `${formatDate(reservation.checkOut)} · ${reservation.guestName} ` +
-          `(${reservation.status})`;
-        reservations.appendChild(item);
-      });
-      card.append(heading, description, reservations);
-      grid.appendChild(card);
-    }
-  } catch (error) {
-    grid.textContent = error.message;
+  if (!window.roomStatusApp) {
+    throw new Error("The room status chart did not load.");
   }
+  await window.roomStatusApp.load();
 }
 
 async function loadRoomBookings() {
@@ -482,13 +406,14 @@ async function loadRoomBookings() {
     return;
   }
 
+  let timeoutId = null;
   try {
-    const result = await apiRequest("/api/admin/room-status");
-    const room = result.rooms.find((candidate) => candidate.id === roomId);
-    if (!room) {
-      content.textContent = "Room unit not found.";
-      return;
-    }
+    const controller = new AbortController();
+    timeoutId = window.setTimeout(() => controller.abort(), 15000);
+    const room = await apiRequest(
+      `/api/admin/room-status/${encodeURIComponent(roomId)}/bookings`,
+      { signal: controller.signal },
+    );
 
     title.textContent = `${room.roomLabel} - Booking History`;
     content.replaceChildren();
@@ -531,7 +456,12 @@ async function loadRoomBookings() {
     table.append(thead, tbody);
     content.appendChild(table);
   } catch (error) {
-    content.textContent = error.message;
+    content.textContent =
+      error.name === "AbortError"
+        ? "Loading timed out while contacting the server. Confirm the server is running, then refresh this page."
+        : error.message || "Could not load room bookings.";
+  } finally {
+    if (timeoutId !== null) window.clearTimeout(timeoutId);
   }
 }
 

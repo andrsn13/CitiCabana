@@ -71,9 +71,10 @@
         <h1 class="display-title" data-content="heroTitle">Citi Cabana</h1>
         <p class="tagline" data-content="heroTagline">
           COMFORTMAXXING? Citi Cabana's got you!
-          <br>
-          From relaxing views and tropical vibes to cozy, comforting rooms, we've got everything you need for your next little escape.
-          Book your stay! Message us on Facebook for reservations.
+          <br />
+          From relaxing views and tropical vibes to cozy, comforting rooms,
+          we've got everything you need for your next little escape. Book your
+          stay! Message us on Facebook for reservations.
         </p>
       </div>
 
@@ -173,7 +174,21 @@
     >
       <div class="parallax-content">
         <div class="glass-card" id="events-card-container">
-          <!-- Rendered via JS -->
+          <h2 class="display-heading" data-content="eventsTitle">
+            Celebrate Here
+          </h2>
+          <p data-content="eventsDescription">
+            Host your weddings, baptisms, birthdays, and special occasions in
+            our beautiful event spaces. We offer customized setups tailored to
+            unforgettable moments.
+          </p>
+          <button
+            class="btn btn-primary mt-4"
+            onclick="openBookingModal('event')"
+            data-content="eventsButton"
+          >
+            Inquire About Events
+          </button>
         </div>
       </div>
     </section>
@@ -699,7 +714,11 @@
       >
         &#10094;
       </button>
-      <img id="lightbox-img" src="" alt="Gallery Full Image" />
+      <img
+        id="lightbox-img"
+        src="/images/gallery-01.jpg"
+        alt="Gallery Full Image"
+      />
       <button
         class="lightbox-next"
         aria-label="Next Image"

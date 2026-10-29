@@ -35,54 +35,119 @@
 
       <main class="admin-content">
         <div class="page-header">
-          <h1>Room Status Board</h1>
-          <button class="btn btn-primary" onclick="initRoomStatusDocs()">
-            Refresh Status
+          <div>
+            <h1>Room Status</h1>
+            <p>Bookings determine occupancy. Housekeeping is managed separately.</p>
+          </div>
+          <button id="status-refresh" class="btn btn-outline" type="button">
+            Refresh
           </button>
         </div>
 
-        <div
-          class="status-legend"
-          role="group"
-          aria-label="Room status color legend"
-        >
-          <span class="status-legend-item">
-            <span
-              class="status-legend-color status-legend-occupied"
-              aria-hidden="true"
-            ></span>
-            Occupied
-          </span>
-          <span class="status-legend-item">
-            <span
-              class="status-legend-color status-legend-cleaning"
-              aria-hidden="true"
-            ></span>
-            Needs cleaning
-          </span>
-          <span class="status-legend-item">
-            <span
-              class="status-legend-color status-legend-ready"
-              aria-hidden="true"
-            ></span>
-            Ready
-          </span>
-        </div>
-        <p>
-          Occupied means a confirmed stay is active today. Each unit lists its
-          pending and confirmed booking date ranges, so a future reservation
-          does not make it unavailable on other dates. Check-out dates are not
-          occupied nights.
-        </p>
+        <div id="room-status-error" class="error-msg" role="alert"></div>
+        <section id="today-strip" class="today-strip" aria-label="Today at a glance"></section>
 
-        <div id="status-grid" class="status-grid">
-          <!-- Rendered via JS -->
-          <p>Loading status board...</p>
-        </div>
+        <nav class="room-status-tabs" aria-label="Room status views">
+          <button type="button" class="active" data-status-tab="chart">Tape chart</button>
+          <button type="button" data-status-tab="housekeeping">Housekeeping</button>
+        </nav>
+
+        <section id="chart-view" class="room-status-view">
+          <div class="chart-toolbar">
+            <div class="chart-date-controls">
+              <button id="chart-previous" class="btn btn-outline" type="button" aria-label="Previous 7 days">◀</button>
+              <button id="chart-today" class="btn btn-outline" type="button">Today</button>
+              <button id="chart-next" class="btn btn-outline" type="button" aria-label="Next 7 days">▶</button>
+              <label for="chart-start">Start date</label>
+              <input id="chart-start" type="date" />
+              <label for="chart-window">Window</label>
+              <select id="chart-window">
+                <option value="7">7 nights</option>
+                <option value="14" selected>14 nights</option>
+                <option value="30">30 nights</option>
+              </select>
+            </div>
+            <button id="chart-block-selected" class="btn btn-outline" type="button" disabled>
+              Block selected dates
+            </button>
+          </div>
+          <div class="status-legend" role="group" aria-label="Booking and block legend">
+            <span class="status-legend-item"><span class="chart-legend-swatch pending"></span>Pending</span>
+            <span class="status-legend-item"><span class="chart-legend-swatch confirmed"></span>Confirmed</span>
+            <span class="status-legend-item"><span class="chart-legend-swatch checkedin"></span>Checked in</span>
+            <span class="status-legend-item"><span class="chart-legend-swatch checkedout"></span>Checked out</span>
+            <span class="status-legend-item"><span class="chart-legend-swatch block"></span>Maintenance block</span>
+          </div>
+          <div id="chart-scroll" class="chart-scroll" tabindex="0" aria-label="Room bookings by night">
+            <div id="status-grid" class="tape-chart">
+              <p class="chart-message">Loading room status…</p>
+            </div>
+          </div>
+          <p class="chart-help">Select or drag across empty nights to create a booking. Right-click a night to block it. Select a maintenance block to remove it.</p>
+        </section>
+
+        <section id="housekeeping-view" class="room-status-view" hidden>
+          <div id="housekeeping-grid" class="housekeeping-grid"></div>
+        </section>
+
+        <dialog id="booking-drawer" class="room-status-dialog">
+          <div class="dialog-heading">
+            <h2 id="booking-drawer-title">Booking</h2>
+            <button type="button" class="dialog-close" data-close-dialog="booking-drawer" aria-label="Close">×</button>
+          </div>
+          <div id="booking-drawer-content"></div>
+        </dialog>
+
+        <dialog id="new-booking-dialog" class="room-status-dialog">
+          <div class="dialog-heading">
+            <h2>New booking</h2>
+            <button type="button" class="dialog-close" data-close-dialog="new-booking-dialog" aria-label="Close">×</button>
+          </div>
+          <form id="new-booking-form" class="status-form">
+            <label>Room <select name="roomId" required></select></label>
+            <label>Guest name <input name="guestName" maxlength="160" required /></label>
+            <label>Email <input name="guestEmail" type="email" /></label>
+            <label>Contact <input name="contact" maxlength="80" required /></label>
+            <label>Check-in <input name="checkIn" type="date" required /></label>
+            <label>Check-out <input name="checkOut" type="date" required /></label>
+            <label>Status
+              <select name="status">
+                <option value="Confirmed">Confirmed</option>
+                <option value="Pending">Pending</option>
+              </select>
+            </label>
+            <p id="dirty-room-warning" class="dirty-room-warning" hidden>
+              This room is Dirty. Check-in is allowed, but housekeeping should be notified.
+            </p>
+            <div class="dialog-actions">
+              <button type="button" class="btn btn-outline" data-close-dialog="new-booking-dialog">Cancel</button>
+              <button type="submit" class="btn btn-primary">Create booking</button>
+            </div>
+          </form>
+        </dialog>
+
+        <dialog id="room-block-dialog" class="room-status-dialog">
+          <div class="dialog-heading">
+            <h2>Block room dates</h2>
+            <button type="button" class="dialog-close" data-close-dialog="room-block-dialog" aria-label="Close">×</button>
+          </div>
+          <form id="room-block-form" class="status-form">
+            <label>Room <select name="roomId" required></select></label>
+            <label>Start date <input name="startDate" type="date" required /></label>
+            <label>End date <input name="endDate" type="date" required /></label>
+            <label>Reason <input name="reason" maxlength="300" required /></label>
+            <div class="dialog-actions">
+              <button type="button" class="btn btn-outline" data-close-dialog="room-block-dialog">Cancel</button>
+              <button type="submit" class="btn btn-primary">Save block</button>
+            </div>
+          </form>
+        </dialog>
       </main>
     </div>
 
     <script src="../js/local-auth.js"></script>
     <script src="../js/local-admin.js"></script>
+    <script src="../js/booking-drawer.js"></script>
+    <script src="../js/room-status.js"></script>
   </body>
 </html>

@@ -30,14 +30,14 @@ classified AS (
       WHEN type = 'room' AND n IN (1, 31, 61) THEN 'CheckedIn'
       WHEN type = 'event' THEN
         CASE (n / 4) % 4
-          WHEN 0 THEN 'Completed'
+          WHEN 0 THEN 'CheckedOut'
           WHEN 1 THEN 'Confirmed'
           WHEN 2 THEN 'Pending'
           ELSE 'Cancelled'
         END
       ELSE
         CASE ((n - 1) / 4) % 4
-          WHEN 0 THEN 'Completed'
+          WHEN 0 THEN 'CheckedOut'
           WHEN 1 THEN 'Confirmed'
           WHEN 2 THEN 'Pending'
           ELSE 'Cancelled'
@@ -51,7 +51,7 @@ seed_rows AS (
     type,
     status,
     CASE
-      WHEN status IN ('Completed', 'Cancelled')
+      WHEN status IN ('CheckedOut', 'Cancelled')
         THEN current_timestamp - (125 + n % 60) * interval '1 day'
       WHEN status = 'CheckedIn'
         THEN current_timestamp - (n % 3) * interval '1 day'
@@ -76,7 +76,7 @@ seed_rows AS (
   FROM classified
 )
 INSERT INTO bookings (
-  type, status, guest_name, guest_email, contact, notes, room_id, room_name,
+  type, status, guest_name, guest_email, contact, notes, room_type_id, room_name,
   check_in, check_out, pax, event_type, event_date, guest_count, time_block,
   created_at
 )
@@ -98,13 +98,13 @@ SELECT
   CASE
     WHEN seed.type <> 'room' THEN NULL
     WHEN seed.status = 'CheckedIn' THEN current_date
-    WHEN seed.status IN ('Completed', 'Cancelled') THEN current_date - (1 + seed.n % 60)
+    WHEN seed.status IN ('CheckedOut', 'Cancelled') THEN current_date - (1 + seed.n % 60)
     ELSE current_date + (2 + seed.n % 60)
   END,
   CASE
     WHEN seed.type <> 'room' THEN NULL
     WHEN seed.status = 'CheckedIn' THEN current_date + 1
-    WHEN seed.status IN ('Completed', 'Cancelled')
+    WHEN seed.status IN ('CheckedOut', 'Cancelled')
       THEN current_date - (1 + seed.n % 60) + (1 + seed.n % 3)
     ELSE current_date + (2 + seed.n % 60) + (1 + seed.n % 3)
   END,
@@ -122,7 +122,7 @@ SELECT
   END,
   CASE
     WHEN seed.type <> 'event' THEN NULL
-    WHEN seed.status IN ('Completed', 'Cancelled') THEN current_date - (1 + seed.n % 60)
+    WHEN seed.status IN ('CheckedOut', 'Cancelled') THEN current_date - (1 + seed.n % 60)
     ELSE current_date + (2 + seed.n % 60)
   END,
   CASE WHEN seed.type = 'event' THEN 20 + (seed.n * 7) % 181 END,
@@ -140,6 +140,51 @@ WHERE NOT EXISTS (
   WHERE existing.guest_email =
     'demo.guest.' || lpad(seed.n::text, 3, '0') || '@example.com'
 );
+
+DO $$
+DECLARE
+  booking_row record;
+  assigned_room_id text;
+BEGIN
+  FOR booking_row IN
+    SELECT id, room_type_id, check_in, check_out
+    FROM bookings
+    WHERE guest_email LIKE 'demo.guest.%@example.com'
+      AND type = 'room'
+      AND status IN ('Confirmed', 'CheckedIn')
+      AND room_id IS NULL
+    ORDER BY check_in, id
+  LOOP
+    assigned_room_id := NULL;
+    SELECT physical.id INTO assigned_room_id
+    FROM physical_rooms AS physical
+    WHERE physical.room_id = booking_row.room_type_id
+      AND physical.active = true
+      AND NOT EXISTS (
+        SELECT 1
+        FROM bookings AS overlapping
+        WHERE overlapping.room_id = physical.id
+          AND overlapping.status IN ('Pending', 'Confirmed', 'CheckedIn')
+          AND daterange(overlapping.check_in, overlapping.check_out, '[)')
+            && daterange(booking_row.check_in, booking_row.check_out, '[)')
+      )
+      AND NOT EXISTS (
+        SELECT 1
+        FROM room_blocks AS block
+        WHERE block.room_id = physical.id
+          AND daterange(block.start_date, block.end_date, '[)')
+            && daterange(booking_row.check_in, booking_row.check_out, '[)')
+      )
+    ORDER BY physical.unit_number
+    LIMIT 1
+    FOR UPDATE OF physical SKIP LOCKED;
+
+    IF assigned_room_id IS NOT NULL THEN
+      UPDATE bookings SET room_id = assigned_room_id WHERE id = booking_row.id;
+    END IF;
+  END LOOP;
+END
+$$;
 
 SELECT count(*) AS demo_bookings
 FROM bookings

@@ -77,8 +77,10 @@
             <!-- Room fields -->
             <div id="walkin-room-fields" class="detail-grid">
               <div class="form-group">
-                <label>Room Type</label
-                ><input type="text" id="walkin-room-type" />
+                <label for="walkin-room-type">Room Type</label>
+                <select id="walkin-room-type" required>
+                  <option value="">Loading room types...</option>
+                </select>
               </div>
               <div class="form-group">
                 <label>Check-in</label><input type="date" id="walkin-checkin" />
@@ -116,50 +118,90 @@
           </form>
         </div>
 
-        <div class="card">
-          <div class="filter-bar">
-            <label><strong>Filter:</strong></label>
-            <select id="filter-status">
-              <option value="All">All Statuses</option>
+        <nav class="booking-tabs" aria-label="Booking views" role="tablist">
+          <button type="button" class="booking-tab active" data-booking-tab="needs-action" role="tab" aria-selected="true">Needs action <span id="count-needs-action" class="booking-tab-count">0</span></button>
+          <button type="button" class="booking-tab" data-booking-tab="today" role="tab" aria-selected="false">Today <span id="count-today" class="booking-tab-count">0</span></button>
+          <button type="button" class="booking-tab" data-booking-tab="in-house" role="tab" aria-selected="false">In-house <span id="count-in-house" class="booking-tab-count">0</span></button>
+          <button type="button" class="booking-tab" data-booking-tab="upcoming" role="tab" aria-selected="false">Upcoming <span id="count-upcoming" class="booking-tab-count">0</span></button>
+          <button type="button" class="booking-tab" data-booking-tab="past" role="tab" aria-selected="false">Past <span id="count-past" class="booking-tab-count">0</span></button>
+          <button type="button" class="booking-tab" data-booking-tab="cancelled" role="tab" aria-selected="false">Cancelled <span id="count-cancelled" class="booking-tab-count">0</span></button>
+          <button type="button" class="booking-tab" data-booking-tab="all" role="tab" aria-selected="false">All <span id="count-all" class="booking-tab-count">0</span></button>
+        </nav>
+
+        <div class="card booking-list-card">
+          <div class="booking-filters" role="search">
+            <label class="booking-search-label" for="booking-search">Search</label>
+            <input id="booking-search" type="search" placeholder="Guest, email, or booking ID" />
+            <label for="filter-type">Type</label>
+            <select id="filter-type">
+              <option value="all">All</option>
+              <option value="room">Room</option>
+              <option value="villa">Villa</option>
+              <option value="event">Event</option>
+            </select>
+            <label for="filter-start">Stay overlaps</label>
+            <input id="filter-start" type="date" aria-label="Date range start" />
+            <span aria-hidden="true">to</span>
+            <input id="filter-end" type="date" aria-label="Date range end" />
+            <label id="filter-status-label" for="filter-status" hidden>Status</label>
+            <select id="filter-status" hidden>
+              <option value="All">All statuses</option>
               <option value="Pending">Pending</option>
               <option value="Confirmed">Confirmed</option>
-              <option value="CheckedIn">Checked In</option>
-              <option value="Completed">Completed</option>
+              <option value="CheckedIn">Checked in</option>
+              <option value="CheckedOut">Checked out</option>
+              <option value="Rejected">Rejected</option>
               <option value="Cancelled">Cancelled</option>
+              <option value="NoShow">No-show</option>
             </select>
-
-            <select id="filter-type">
-              <option value="All">All Types</option>
-              <option value="room">Rooms</option>
-              <option value="event">Events</option>
-            </select>
+            <button type="button" id="clear-booking-filters" class="booking-clear">Clear</button>
           </div>
-
+          <p id="booking-list-error" class="error-msg" role="alert"></p>
+          <div id="booking-sections"></div>
           <div class="table-responsive">
             <table id="bookings-table">
               <thead>
                 <tr>
-                  <th>Date Placed</th>
                   <th>Guest</th>
-                  <th>Type / Details</th>
-                  <th>Dates</th>
+                  <th>Stay</th>
+                  <th>Unit</th>
                   <th>Status</th>
+                  <th>Placed</th>
                   <th>Action</th>
                 </tr>
               </thead>
               <tbody id="bookings-tbody">
-                <!-- Rendered via JS -->
-                <tr>
-                  <td colspan="6" class="text-center">Loading bookings...</td>
-                </tr>
+                <tr><td colspan="6" class="text-center">Loading bookings...</td></tr>
               </tbody>
             </table>
           </div>
+          <div class="booking-pagination">
+            <span id="booking-page-summary" aria-live="polite"></span>
+            <button type="button" id="booking-page-previous" class="btn btn-outline">Previous</button>
+            <button type="button" id="booking-page-next" class="btn btn-outline">Next</button>
+          </div>
         </div>
+
+        <div id="booking-toast" class="booking-toast" role="status" aria-live="polite" hidden>
+          <span id="booking-toast-message"></span>
+          <button id="booking-undo" type="button" hidden>Undo</button>
+          <button id="booking-toast-close" type="button" aria-label="Dismiss">×</button>
+        </div>
+
+        <dialog id="booking-drawer" class="room-status-dialog">
+          <div class="dialog-heading">
+            <h2 id="booking-drawer-title">Booking</h2>
+            <button type="button" class="dialog-close" data-close-dialog="booking-drawer" aria-label="Close">×</button>
+          </div>
+          <div id="booking-drawer-content"></div>
+        </dialog>
       </main>
     </div>
 
     <script src="../js/local-auth.js"></script>
     <script src="../js/local-admin.js"></script>
+    <script src="../js/booking-drawer.js"></script>
+    <script src="../js/booking-view-rules.js"></script>
+    <script src="../js/bookings.js"></script>
   </body>
 </html>

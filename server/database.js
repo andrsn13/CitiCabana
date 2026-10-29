@@ -157,39 +157,17 @@ export async function initializeDatabase(pool) {
     }
   }
   await syncPhysicalRooms(pool);
-  await pool.query(
-    `UPDATE physical_rooms AS physical
-     SET status = 'Ready', last_updated = now()
-     WHERE physical.status = 'Occupied'
-       AND NOT EXISTS (
-         SELECT 1 FROM bookings
-         WHERE physical_room_id = physical.id
-           AND status IN ('Confirmed', 'CheckedIn')
-           AND check_in <= CURRENT_DATE
-           AND check_out > CURRENT_DATE
-       )`,
-  );
   await syncRoomBookingAssignments(pool);
-  await pool.query(
-    `UPDATE physical_rooms AS physical
-     SET status = 'Occupied', last_updated = now()
-     WHERE EXISTS (
-       SELECT 1 FROM bookings
-       WHERE physical_room_id = physical.id
-         AND status IN ('Confirmed', 'CheckedIn')
-         AND check_in <= CURRENT_DATE
-         AND check_out > CURRENT_DATE
-     )`,
-  );
 }
 
 async function syncRoomBookingAssignments(pool) {
   const bookings = await pool.query(
-    `SELECT id, room_id, check_in, check_out, status
+    `SELECT id, room_type_id, check_in, check_out, status
      FROM bookings
      WHERE type = 'room'
-       AND physical_room_id IS NULL
-       AND room_id IS NOT NULL
+       AND room_id IS NULL
+       AND room_type_id IS NOT NULL
+       AND status IN ('Confirmed', 'CheckedIn')
      ORDER BY CASE
          WHEN status IN ('Pending', 'Confirmed', 'CheckedIn') THEN 0
          ELSE 1
@@ -197,7 +175,7 @@ async function syncRoomBookingAssignments(pool) {
        CASE WHEN status = 'Pending' THEN 1 ELSE 0 END,
        check_in, id`,
   );
-  let unassigned = 0;
+  let unassignedBlocking = 0;
 
   for (const booking of bookings.rows) {
     const client = await pool.connect();
@@ -210,35 +188,26 @@ async function syncRoomBookingAssignments(pool) {
            AND physical.active = true
            AND (
              $5::boolean = false
-             OR (
-               physical.status <> 'Needs Cleaning'
-               AND (
-                 physical.status = 'Ready'
-                 OR EXISTS (
-                   SELECT 1 FROM bookings AS linked
-                   WHERE linked.physical_room_id = physical.id
-                     AND linked.status IN ('Pending', 'Confirmed', 'CheckedIn')
-                 )
-               )
-             )
-           )
-           AND (
-             $5::boolean = false
              OR NOT EXISTS (
                SELECT 1 FROM bookings AS overlapping
-               WHERE overlapping.physical_room_id = physical.id
+               WHERE overlapping.room_id = physical.id
                  AND overlapping.id <> $2
                  AND overlapping.status IN ('Pending', 'Confirmed', 'CheckedIn')
                  AND daterange(overlapping.check_in, overlapping.check_out, '[)')
                    && daterange($3::date, $4::date, '[)')
              )
            )
-         ORDER BY CASE WHEN physical.status = 'Ready' THEN 0 ELSE 1 END,
-           physical.unit_number
+           AND NOT EXISTS (
+             SELECT 1 FROM room_blocks AS block
+             WHERE block.room_id = physical.id
+               AND daterange(block.start_date, block.end_date, '[)')
+                 && daterange($3::date, $4::date, '[)')
+           )
+         ORDER BY physical.unit_number
          FOR UPDATE OF physical SKIP LOCKED
          LIMIT 1`,
         [
-          booking.room_id,
+          booking.room_type_id,
           booking.id,
           booking.check_in,
           booking.check_out,
@@ -248,21 +217,14 @@ async function syncRoomBookingAssignments(pool) {
       const physicalRoomId = result.rows[0]?.id;
       if (!physicalRoomId) {
         await client.query("ROLLBACK");
-        unassigned += 1;
+        if (["Pending", "Confirmed", "CheckedIn"].includes(booking.status)) {
+          unassignedBlocking += 1;
+        }
         continue;
       }
 
       await client.query(
-        `UPDATE physical_rooms SET status = 'Occupied', last_updated = now()
-         WHERE id = $1 AND EXISTS (
-           SELECT 1 FROM bookings
-           WHERE id = $2 AND status IN ('Confirmed', 'CheckedIn')
-             AND check_in <= CURRENT_DATE AND check_out > CURRENT_DATE
-         )`,
-        [physicalRoomId, booking.id],
-      );
-      await client.query(
-        "UPDATE bookings SET physical_room_id = $1 WHERE id = $2",
+        "UPDATE bookings SET room_id = $1 WHERE id = $2",
         [physicalRoomId, booking.id],
       );
       await client.query("COMMIT");
@@ -274,9 +236,9 @@ async function syncRoomBookingAssignments(pool) {
     }
   }
 
-  if (unassigned > 0) {
+  if (unassignedBlocking > 0) {
     console.error(
-      `Could not assign ${unassigned} active room booking(s) to physical units. Check room inventory, date overlaps, and room cleaning status.`,
+      `Could not assign ${unassignedBlocking} date-blocking room booking(s) to physical units. They remain capacity holds and are visible in the Unassigned chart lane and Bookings list.`,
     );
   }
 }
@@ -324,8 +286,8 @@ export async function syncPhysicalRooms(pool, roomId = null) {
     for (let unitNumber = 1; unitNumber <= room.inventory; unitNumber += 1) {
       const roomLabel = `${room.name} ${unitNumber}`;
       await pool.query(
-        `INSERT INTO physical_rooms (id, room_id, unit_number, room_label, status)
-         VALUES ($1, $2, $3, $4, 'Ready')
+          `INSERT INTO physical_rooms (id, room_id, unit_number, room_label)
+           VALUES ($1, $2, $3, $4)
          ON CONFLICT (room_id, unit_number)
          DO UPDATE SET room_label = EXCLUDED.room_label, active = true`,
         [`${room.id}-${unitNumber}`, room.id, unitNumber, roomLabel],

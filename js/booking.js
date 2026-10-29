@@ -9,6 +9,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const checkOut = document.getElementById("room-checkout");
   const roomSelect = document.getElementById("room-type-select");
 
+  const todayParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const todayValues = Object.fromEntries(
+    todayParts.map((part) => [part.type, part.value]),
+  );
+  const today = `${todayValues.year}-${todayValues.month}-${todayValues.day}`;
+  if (checkIn) checkIn.min = today;
+  if (checkOut) checkOut.min = today;
+
   if (roomForm) {
     roomForm.addEventListener("submit", handleRoomBooking);
   }
@@ -34,6 +47,22 @@ async function checkRoomAvailability() {
   if (!roomId || !checkIn || !checkOut || checkOut <= checkIn) {
     message.textContent = "";
     submitButton.disabled = false;
+    return;
+  }
+  const todayParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const todayValues = Object.fromEntries(
+    todayParts.map((part) => [part.type, part.value]),
+  );
+  const today = `${todayValues.year}-${todayValues.month}-${todayValues.day}`;
+  if (checkIn < today) {
+    message.textContent = "Check-in must be today or a future date.";
+    message.classList.add("unavailable");
+    submitButton.disabled = true;
     return;
   }
 
@@ -99,7 +128,7 @@ async function handleRoomBooking(e) {
     guestName: document.getElementById("room-name").value,
     guestEmail: document.getElementById("room-email").value,
     contact: document.getElementById("room-contact").value,
-    roomId: document.getElementById("room-type-select").value,
+    roomTypeId: document.getElementById("room-type-select").value,
     checkIn: checkIn,
     checkOut: checkOut,
     pax: parseInt(document.getElementById("room-pax").value, 10),
