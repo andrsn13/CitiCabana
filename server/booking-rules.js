@@ -17,6 +17,14 @@ export function validStay(checkIn, checkOut) {
   return validDate(checkIn) && validDate(checkOut) && checkOut > checkIn;
 }
 
+export function validContactNumber(value) {
+  if (typeof value !== "string") return false;
+  const trimmed = value.trim();
+  if (trimmed.length > 32 || !/^\+?[\d\s().-]+$/.test(trimmed)) return false;
+  const digits = trimmed.replace(/\D/g, "");
+  return digits.length >= 7 && digits.length <= 15;
+}
+
 export function minimumCheckoutDate(checkIn, today) {
   if (today > checkIn) return today;
   const nextDay = new Date(`${checkIn}T00:00:00Z`);

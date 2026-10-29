@@ -13,6 +13,7 @@ import {
   isBlockingStatus,
   minimumCheckoutDate,
   propertyToday,
+  validContactNumber,
   validDate,
   validStay,
 } from "./booking-rules.js";
@@ -948,20 +949,34 @@ export function registerApi(app, pool) {
   router.post(
     "/bookings",
     asyncRoute(async (request, response) => {
-      const booking = request.body;
+      const booking = request.body || {};
+      const notes = booking.notes ?? "";
       if (
         !validText(booking.guestName, 160) ||
-        !validText(booking.contact, 80) ||
-        !validEmail(booking.guestEmail)
+        !validContactNumber(booking.contact) ||
+        !validEmail(booking.guestEmail) ||
+        typeof notes !== "string" ||
+        notes.length > 1000
       ) {
         return response
           .status(400)
           .json({
-            error: "Name, contact number, and a valid email are required",
+            error:
+              "Enter a name, valid contact number, valid email, and notes under 1,000 characters.",
           });
       }
 
       if (booking.type === "room") {
+        const guestCount = booking.pax;
+        if (
+          !Number.isSafeInteger(guestCount) ||
+          guestCount < 1 ||
+          guestCount > 2147483647
+        ) {
+          return response
+            .status(400)
+            .json({ error: "Guest count must be a whole number of at least one." });
+        }
         if (
           !validStay(booking.checkIn, booking.checkOut) ||
           booking.checkIn < propertyToday()
@@ -975,7 +990,7 @@ export function registerApi(app, pool) {
         try {
           await client.query("BEGIN");
           const roomResult = await client.query(
-            `SELECT id, name, inventory FROM rooms
+            `SELECT id, name, inventory, capacity FROM rooms
              WHERE active = true AND id = $1
              FOR UPDATE`,
             [booking.roomTypeId || booking.roomId || ""],
@@ -985,6 +1000,18 @@ export function registerApi(app, pool) {
             await client.query("ROLLBACK");
             return response.status(400).json({
               error: "Choose an active room type",
+            });
+          }
+          const capacityMatch = String(room.capacity).match(
+            /(\d+)(?:\s*-\s*(\d+))?\s*pax\b/i,
+          );
+          const maxGuests = capacityMatch
+            ? Number(capacityMatch[2] || capacityMatch[1])
+            : null;
+          if (maxGuests && guestCount > maxGuests) {
+            await client.query("ROLLBACK");
+            return response.status(400).json({
+              error: `This room type accommodates up to ${maxGuests} guests.`,
             });
           }
 
@@ -1010,12 +1037,12 @@ export function registerApi(app, pool) {
               booking.guestName.trim(),
               booking.guestEmail.trim().toLowerCase(),
               booking.contact.trim(),
-              booking.notes || "",
+              notes.trim(),
               room.id,
               room.name,
               booking.checkIn,
               booking.checkOut,
-              Number(booking.pax) || 1,
+              guestCount,
             ],
           );
           await client.query("COMMIT");
@@ -1028,14 +1055,24 @@ export function registerApi(app, pool) {
         return response.status(201).json(result.rows[0]);
       }
 
-      if (
-        booking.type === "event" &&
-        validEmail(booking.guestEmail) &&
-        validText(booking.eventType, 80) &&
-        booking.eventDate &&
-        Number(booking.guestCount) > 0 &&
-        validText(booking.timeBlock, 40)
-      ) {
+      if (booking.type === "event") {
+        const guestCount = booking.guestCount;
+        if (
+          !validText(booking.eventType, 80) ||
+          !validDate(booking.eventDate) ||
+          booking.eventDate < propertyToday() ||
+          !Number.isSafeInteger(guestCount) ||
+          guestCount < 1 ||
+          guestCount > 2147483647 ||
+          !["Morning", "Afternoon", "Evening", "Full Day"].includes(
+            booking.timeBlock,
+          )
+        ) {
+          return response.status(400).json({
+            error:
+              "Choose a valid event type, today or a future date, a whole guest count, and a time block.",
+          });
+        }
         const result = await pool.query(
           `INSERT INTO bookings (type, guest_name, guest_email, contact, notes, event_type, event_date, guest_count, time_block)
          VALUES ('event', $1, $2, $3, $4, $5, $6, $7, $8) RETURNING ${bookingColumns}`,
@@ -1043,10 +1080,10 @@ export function registerApi(app, pool) {
             booking.guestName.trim(),
             booking.guestEmail.trim().toLowerCase(),
             booking.contact.trim(),
-            booking.notes || "",
+            notes.trim(),
             booking.eventType,
             booking.eventDate,
-            Number(booking.guestCount),
+            guestCount,
             booking.timeBlock,
           ],
         );

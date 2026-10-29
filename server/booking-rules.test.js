@@ -5,6 +5,7 @@ import {
   minimumCheckoutDate,
   propertyToday,
   rangesOverlap,
+  validContactNumber,
   validDate,
   validStay,
 } from "./booking-rules.js";
@@ -44,6 +45,17 @@ test("only pending, confirmed, and checked-in bookings hold inventory", () => {
 
 test("property date is formatted in Asia/Manila", () => {
   assert.match(propertyToday(), /^\d{4}-\d{2}-\d{2}$/);
+});
+
+test("validates phone numbers while allowing common international formatting", () => {
+  assert.equal(validContactNumber("09127855801"), true);
+  assert.equal(validContactNumber("+63 912-785-5801"), true);
+  assert.equal(validContactNumber("(555) 123-4567"), true);
+  assert.equal(validContactNumber("123456"), false);
+  assert.equal(validContactNumber("0912ABC5801"), false);
+  assert.equal(validContactNumber("++639127855801"), false);
+  assert.equal(validContactNumber(`1234567${"-".repeat(26)}`), false);
+  assert.equal(validContactNumber(null), false);
 });
 
 test("checkout preserves a valid one-night stay when checking out on check-in day", () => {

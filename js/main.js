@@ -127,6 +127,12 @@ function renderSplitScreenRooms() {
     const option = document.createElement("option");
     option.value = room.id;
     option.textContent = `${room.name} (₱${Number(room.rate).toLocaleString()})`;
+    const capacityMatch = String(room.capacity).match(
+      /(\d+)(?:\s*-\s*(\d+))?\s*pax\b/i,
+    );
+    if (capacityMatch) {
+      option.dataset.maxGuests = capacityMatch[2] || capacityMatch[1];
+    }
     select.appendChild(option);
 
     // Build editorial row
@@ -257,9 +263,31 @@ function renderBentoGrid() {
 
 // Hub Floating Booking Bar Logic
 function triggerBookingFromBar() {
-  const checkin = document.getElementById("bar-checkin").value;
-  const checkout = document.getElementById("bar-checkout").value;
+  const checkinInput = document.getElementById("bar-checkin");
+  const checkoutInput = document.getElementById("bar-checkout");
+  const checkin = checkinInput.value;
+  const checkout = checkoutInput.value;
   const pax = document.getElementById("bar-pax").value;
+  const today = propertyToday();
+  checkinInput.min = today;
+  const earliestCheckout = new Date(`${checkin || today}T00:00:00Z`);
+  earliestCheckout.setUTCDate(earliestCheckout.getUTCDate() + 1);
+  checkoutInput.min = earliestCheckout.toISOString().slice(0, 10);
+  checkinInput.setCustomValidity(
+    checkin && checkin < today ? "Check-in must be today or a future date." : "",
+  );
+  checkoutInput.setCustomValidity(
+    checkout && checkout < today
+      ? "Check-out must be today or a future date."
+      : checkin && checkout && checkout <= checkin
+        ? "Check-out must be after check-in."
+        : "",
+  );
+  if ((checkin && checkin < today) || (checkout && checkout < today) ||
+      (checkin && checkout && checkout <= checkin)) {
+    (checkinInput.validity.valid ? checkoutInput : checkinInput).reportValidity();
+    return;
+  }
 
   // Transfer values to modal form if they exist
   if (checkin) document.getElementById("room-checkin").value = checkin;
@@ -352,6 +380,7 @@ function prevLightbox() {
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     closeLightbox();
+    if (document.getElementById("booking-review-dialog")?.open) return;
     const bModal = document.getElementById("booking-modal");
     const gModal = document.getElementById("gallery-modal");
     if (bModal && !bModal.classList.contains("hidden"))
