@@ -11,6 +11,7 @@ import { syncPhysicalRooms } from "./database.js";
 import { sendBookingConfirmation } from "./email.js";
 import {
   isBlockingStatus,
+  minimumCheckoutDate,
   propertyToday,
   validDate,
   validStay,
@@ -1450,10 +1451,10 @@ export function registerApi(app, pool) {
         if (status === "CheckedOut" && status !== current.status) {
           finalCheckOut =
             request.body.checkOut ||
-            (await client.query(
-            "SELECT to_char((now() AT TIME ZONE 'Asia/Manila')::date, 'YYYY-MM-DD') AS today",
-          )).rows[0].today;
-          if (finalCheckOut <= checkIn) {
+            (isRoomBooking
+              ? minimumCheckoutDate(checkIn, propertyToday())
+              : null);
+          if (isRoomBooking && finalCheckOut <= checkIn) {
             await client.query("ROLLBACK");
             return response.status(400).json({
               error: "Check-out must be after check-in.",

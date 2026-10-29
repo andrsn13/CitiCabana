@@ -492,6 +492,10 @@
 
   function openRoomBlock(roomId, startDate, endDate) {
     const form = document.getElementById("room-block-form");
+    const error = document.getElementById("room-block-error");
+    error.textContent = "";
+    error.hidden = true;
+    error.style.display = "none";
     const roomSelect = form.elements.roomId;
     roomSelect.replaceChildren();
     state.rooms.forEach((room) => {
@@ -738,6 +742,13 @@
     .addEventListener("submit", async (event) => {
       event.preventDefault();
       const form = event.currentTarget;
+      const submit = form.querySelector('button[type="submit"]');
+      const error = document.getElementById("room-block-error");
+      error.textContent = "";
+      error.hidden = true;
+      error.style.display = "none";
+      submit.disabled = true;
+      submit.textContent = "Saving...";
       try {
         await apiRequest("/api/admin/room-blocks", {
           method: "POST",
@@ -751,7 +762,13 @@
         document.getElementById("room-block-dialog").close();
         await load();
       } catch (error) {
-        showError(error.message);
+        const message = document.getElementById("room-block-error");
+        message.textContent = error.message;
+        message.hidden = false;
+        message.style.display = "block";
+      } finally {
+        submit.disabled = false;
+        submit.textContent = "Save block";
       }
     });
 

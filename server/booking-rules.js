@@ -17,6 +17,13 @@ export function validStay(checkIn, checkOut) {
   return validDate(checkIn) && validDate(checkOut) && checkOut > checkIn;
 }
 
+export function minimumCheckoutDate(checkIn, today) {
+  if (today > checkIn) return today;
+  const nextDay = new Date(`${checkIn}T00:00:00Z`);
+  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+  return nextDay.toISOString().slice(0, 10);
+}
+
 export function isBlockingStatus(status) {
   return ["Pending", "Confirmed", "CheckedIn"].includes(status);
 }

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   isBlockingStatus,
+  minimumCheckoutDate,
   propertyToday,
   rangesOverlap,
   validDate,
@@ -43,4 +44,11 @@ test("only pending, confirmed, and checked-in bookings hold inventory", () => {
 
 test("property date is formatted in Asia/Manila", () => {
   assert.match(propertyToday(), /^\d{4}-\d{2}-\d{2}$/);
+});
+
+test("checkout preserves a valid one-night stay when checking out on check-in day", () => {
+  assert.equal(minimumCheckoutDate("2026-10-29", "2026-10-29"), "2026-10-30");
+  assert.equal(minimumCheckoutDate("2026-10-29", "2026-10-28"), "2026-10-30");
+  assert.equal(minimumCheckoutDate("2026-10-29", "2026-10-30"), "2026-10-30");
+  assert.equal(minimumCheckoutDate("2026-10-29", "2026-10-31"), "2026-10-31");
 });
